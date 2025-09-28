@@ -1,4 +1,3 @@
-DEBUG = False  # Cambia a False para ocultar bordes y colores de depuración
 #! /usr/bin/env python3
 
 import tkinter as tk
@@ -8,7 +7,7 @@ from tkinter import filedialog
 
 def get_current_directory():
     ''' Get the directory where the script is located '''
-    return os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 def get_last_opened_project():
     ''' Retrieve the last opened project path from config.json '''
