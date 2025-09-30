@@ -34,7 +34,10 @@ def set_last_opened_project(path):
 PROJECT_FILES = {
     "battle_ai":    "/include/constants/battle_ai.h",
     "items":        "/include/constants/items.h",
+    "moves":        "/include/constants/moves.h",
     "opponents":    "/include/constants/opponents.h",
+    "natures":      "/include/constants/pokemon.h",
+    "species":      "/include/constants/species.h",
     "trainer_info": "/include/constants/trainers.h",
     "trainer_pics": "/graphics/trainers/front_pics"
 }
@@ -43,9 +46,10 @@ TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "train
 MON_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "pokemon_placeholder.png")
 
 
-class Project_Data():
+class ProjectData():
     def __init__(self):
         self.trainers = []
+        self.expansion = False
 
 
 class App(tk.Tk):
@@ -54,25 +58,27 @@ class App(tk.Tk):
         self.title("Decomp Trainer Editor")
         self.geometry("1366x768")
         self.project_path = None
-        self.project_data = None
+        self.project_data = ProjectData()
         self.ai_flag_names = []
+
+        self.showdown_type_output = False
 
         ############
         # MENU BAR #
         ############
 
         # Defining the top menu bar container
-        menubar = tk.Menu(self)
+        self.menubar = tk.Menu(self)
 
         # File menu: It allows to open/save projects and exit the app.
-        file_menu = tk.Menu(menubar, tearoff=0)
+        file_menu = tk.Menu(self.menubar, tearoff=0)
         file_menu_open = file_menu.add_command(label="Open project", command=self.open_project)
         file_menu_save = file_menu.add_command(label="Save project")
         file_menu.add_separator()
         file_menu_exit = file_menu.add_command(label="Exit", command=self.quit)
 
         # Edit menu: It allows to copy/paste trainer settings or just Pokémon data. It will be disabled by default until a project is opened.
-        edit_menu = tk.Menu(menubar, tearoff=0)
+        edit_menu = tk.Menu(self.menubar, tearoff=0)
         edit_menu.add_command(label="Copy trainer")
         edit_menu.add_command(label="Paste trainer")
         edit_menu.add_separator()
@@ -80,15 +86,15 @@ class App(tk.Tk):
         edit_menu.add_command(label="Paste Pokémon")
 
         # Help menu: It allows to access documentation and see info about the app.
-        help_menu = tk.Menu(menubar, tearoff=0)
+        help_menu = tk.Menu(self.menubar, tearoff=0)
         help_menu.add_command(label="Documentation")
         help_menu.add_command(label="About")
 
         # Adding all menus to the menubar and configuring the root window to use it
-        menubar.add_cascade(label="File", menu=file_menu)
-        menubar.add_cascade(label="Edit", menu=edit_menu, state=tk.DISABLED)
-        menubar.add_cascade(label="Help", menu=help_menu)
-        self.config(menu=menubar)
+        self.menubar.add_cascade(label="File", menu=file_menu)
+        self.menubar.add_cascade(label="Edit", menu=edit_menu, state=tk.DISABLED)
+        self.menubar.add_cascade(label="Help", menu=help_menu)
+        self.config(menu=self.menubar)
 
         # The main windows layout is divided in 3 columns. One will permit to select the trainer to edit,
         # the second will show trainer general info and the third will show the selected Pokémon info from the party.
@@ -151,36 +157,39 @@ class App(tk.Tk):
 
         self.name_entry = ttk.Entry(col2)
         self.name_entry.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
+        self.name_entry.config(state='readonly')
         row += 1
 
         # Radio buttons for gender. This will be saved in self.current_trainer_gender_var.
         self.current_trainer_gender_var = tk.StringVar(value=gender_options[0])
         gender_frame = ttk.Frame(col2)
         gender_frame.grid(row=row, column=0, columnspan=2, sticky="w", padx=10, pady=2)
+        self.radio_gender = []
         for i, opt in enumerate(gender_options):
-            rb = ttk.Radiobutton(gender_frame, text=opt, variable=self.current_trainer_gender_var, value=opt)
+            rb = ttk.Radiobutton(gender_frame, text=opt, variable=self.current_trainer_gender_var, value=opt, state="disabled")
+            self.radio_gender.append(rb)
             rb.pack(side=tk.LEFT, padx=5)
         row += 1
 
         # Combobox for each remaining field. Empty values by default before loading a project.
         ttk.Label(col2, text="Trainer Pic:").grid(row=row, column=0, sticky="w", padx=10, pady=5)
-        self.trainer_pic_cb = ttk.Combobox(col2, values=[], state="readonly")
+        self.trainer_pic_cb = ttk.Combobox(col2, values=[], state="disabled")
         self.trainer_pic_cb.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
         row += 1
 
         ttk.Label(col2, text="Trainer Class:").grid(row=row, column=0, sticky="w", padx=10, pady=5)
-        self.trainer_class_cb = ttk.Combobox(col2, values=[], state="readonly")
+        self.trainer_class_cb = ttk.Combobox(col2, values=[], state="disabled")
         self.trainer_class_cb.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
         row += 1
 
         ttk.Label(col2, text="Encounter Music:").grid(row=row, column=0, sticky="w", padx=10, pady=5)
-        self.encounter_music_cb = ttk.Combobox(col2, values=[], state="readonly")
+        self.encounter_music_cb = ttk.Combobox(col2, values=[], state="disabled")
         self.encounter_music_cb.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
         row += 1
 
         self.double_battle_var = tk.BooleanVar(value=False)
-        self.double_battle_cb = ttk.Checkbutton(col2, text="Double Battle", variable=self.double_battle_var)
-        self.double_battle_cb.grid(row=row, column=0, sticky="w", padx=10, pady=5)
+        self.double_battle_check = ttk.Checkbutton(col2, text="Double Battle", variable=self.double_battle_var, state="disabled")
+        self.double_battle_check.grid(row=row, column=0, sticky="w", padx=10, pady=5)
         row += 1
 
         # Here we will have a tabbed notebook with 3 tabs: Pokémon & Items, AI Flags and Places where the trainer battle is found.
@@ -212,15 +221,15 @@ class App(tk.Tk):
         # They must be disabled if there is no project opened.
         btns_frame = ttk.Frame(party_frame)
         btns_frame.pack(fill=tk.X, pady=(8, 0))
-        party_button_up     = ttk.Button(btns_frame, text="Up", state=tk.DISABLED)
-        party_button_down   = ttk.Button(btns_frame, text="Down", state=tk.DISABLED)
-        party_button_add    = ttk.Button(btns_frame, text="Add", state=tk.DISABLED)
-        party_button_remove = ttk.Button(btns_frame, text="Remove", state=tk.DISABLED)
+        self.party_button_up     = ttk.Button(btns_frame, text="Up", state=tk.DISABLED)
+        self.party_button_down   = ttk.Button(btns_frame, text="Down", state=tk.DISABLED)
+        self.party_button_add    = ttk.Button(btns_frame, text="Add", state=tk.DISABLED)
+        self.party_button_remove = ttk.Button(btns_frame, text="Remove", state=tk.DISABLED)
 
-        party_button_up.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        party_button_down.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        party_button_remove.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        party_button_add.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        self.party_button_up.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        self.party_button_down.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        self.party_button_remove.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        self.party_button_add.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
 
         # The second column will have the four items comboboxes.
         items_frame = ttk.Frame(poke_items_frame)
@@ -231,7 +240,7 @@ class App(tk.Tk):
         # In this case we will define the items as a list of comboboxes.
         self.item_cbs = []
         for i in range(4):
-            cb = ttk.Combobox(items_frame, values=[], state="readonly")
+            cb = ttk.Combobox(items_frame, values=[], state="disabled")
             cb.pack(fill=tk.X, pady=2)
             self.item_cbs.append(cb)
 
@@ -240,36 +249,18 @@ class App(tk.Tk):
         # -------------------- #
         # Trainer AI flags tab #
         # -------------------- #
-        ai_tab = ttk.Frame(tabbed_notebook)
-        tabbed_notebook.add(ai_tab, text="AI Flags")
-        # This list must be defined from battle_ai.h. Currently hardcoded.
-        self.ai_flag_names = [
-            "AI_FLAG_CHECK_BAD_MOVE", "AI_FLAG_TRY_TO_FAINT", "AI_FLAG_CHECK_VIABILITY", "AI_FLAG_FORCE_SETUP_FIRST_TURN",
-            "AI_FLAG_RISKY", "AI_FLAG_TRY_TO_2HKO", "AI_FLAG_PREFER_BATON_PASS", "AI_FLAG_DOUBLE_BATTLE",
-            "AI_FLAG_HP_AWARE", "AI_FLAG_POWERFUL_STATUS", "AI_FLAG_NEGATE_UNAWARE", "AI_FLAG_WILL_SUICIDE",
-            "AI_FLAG_PREFER_STATUS_MOVES", "AI_FLAG_STALL", "AI_FLAG_SMART_SWITCHING", "AI_FLAG_ACE_POKEMON",
-            "AI_FLAG_OMNISCIENT", "AI_FLAG_SMART_MON_CHOICES", "AI_FLAG_CONSERVATIVE", "AI_FLAG_SEQUENCE_SWITCHING",
-            "AI_FLAG_DOUBLE_ACE_POKEMON", "AI_FLAG_WEIGH_ABILITY_PREDICTION", "AI_FLAG_PREFER_HIGHEST_DAMAGE_MOVE",
-            "AI_FLAG_PREDICT_SWITCH", "AI_FLAG_PREDICT_INCOMING_MON"
-        ]
+        self.ai_tab = ttk.Frame(tabbed_notebook)
+        tabbed_notebook.add(self.ai_tab, text="AI Flags")
         self.ai_flag_vars = []
-
         # In pokeemerald expansion there are some presets for AI flags. We will add a combobox to select one and a button to apply them
         # only if the project is based on pokeemerald expansion. Currently always shown as we don't detect the project type.
-        preset_frame = ttk.Frame(ai_tab)
+        preset_frame = ttk.Frame(self.ai_tab)
         preset_frame.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
         ttk.Label(preset_frame, text="Preset:").pack(side=tk.LEFT, padx=(0, 5))
-        self.preset_cb = ttk.Combobox(preset_frame, values=["Basic Trainer", "Smart Trainer", "Predict"], state="readonly")
+        self.preset_cb = ttk.Combobox(preset_frame, values=["Basic Trainer", "Smart Trainer", "Predict"], state="disabled")
         self.preset_cb.pack(side=tk.LEFT, padx=(0, 5))
-        apply_btn = ttk.Button(preset_frame, text="Apply")
-        apply_btn.pack(side=tk.LEFT)
-
-        # Populate checkboxes for each AI flag dynamically
-        for i, flag in enumerate(self.ai_flag_names):
-            var = tk.BooleanVar()
-            cb = ttk.Checkbutton(ai_tab, text=flag.replace("AI_FLAG_", ""), variable=var)
-            cb.grid(row=1 + i//2, column=i%2, sticky="w", padx=2, pady=1)
-            self.ai_flag_vars.append((flag, var))
+        self.apply_btn = ttk.Button(preset_frame, text="Apply", state=tk.DISABLED)
+        self.apply_btn.pack(side=tk.LEFT)
         
         # ---------- #
         # Places tab #
@@ -306,35 +297,41 @@ class App(tk.Tk):
 
         # Species
         ttk.Label(poke_fields_frame, text="Species:").grid(row=0, column=0, sticky="w", pady=4)
-        self.species_cb = ttk.Combobox(poke_fields_frame, values=["PIKACHU", "BULBASAUR", "CHARMANDER", "SQUIRTLE"], state="readonly")
+        self.species_cb = ttk.Combobox(poke_fields_frame, values=[], state="disabled")
         self.species_cb.grid(row=0, column=1, sticky="ew", pady=4)
 
         # Level
         ttk.Label(poke_fields_frame, text="Level:").grid(row=1, column=0, sticky="w", pady=4)
-        self.level_sb = tk.Spinbox(poke_fields_frame, from_=1, to=100, width=5)
+        self.level_sb = tk.Spinbox(poke_fields_frame, from_=1, to=100, width=5, state="disabled")
         self.level_sb.grid(row=1, column=1, sticky="w", pady=4)
 
         # Held Item
         ttk.Label(poke_fields_frame, text="Held Item:").grid(row=2, column=0, sticky="w", pady=4)
-        self.held_item_cb = ttk.Combobox(poke_fields_frame, values=["ITEM_NONE", "LEFTOVERS", "CHOICE_BAND", "BERRY"], state="readonly")
+        self.held_item_cb = ttk.Combobox(poke_fields_frame, values=[], state="disabled")
         self.held_item_cb.grid(row=2, column=1, sticky="ew", pady=4)
 
         # Ability
         ttk.Label(poke_fields_frame, text="Ability:").grid(row=3, column=0, sticky="w", pady=4)
-        self.ability_cb = ttk.Combobox(poke_fields_frame, values=["ABILITY_NONE", "OVERGROW", "BLAZE", "TORRENT", "STATIC"], state="readonly")
+        self.ability_cb = ttk.Combobox(poke_fields_frame, values=["RANDOM", "FIRST", "SECOND", "HIDDEN"], state="disabled")
         self.ability_cb.grid(row=3, column=1, sticky="ew", pady=4)
 
         # Nature
         ttk.Label(poke_fields_frame, text="Nature:").grid(row=4, column=0, sticky="w", pady=4)
-        self.nature_cb = ttk.Combobox(poke_fields_frame, values=["NATURE_HARDY", "NATURE_BOLD", "NATURE_TIMID", "NATURE_ADAMANT"], state="readonly")
+        self.nature_cb = ttk.Combobox(poke_fields_frame, values=[], state="disabled")
         self.nature_cb.grid(row=4, column=1, sticky="ew", pady=4)
 
         # Moves
         ttk.Label(poke_fields_frame, text="Moves:").grid(row=5, column=0, sticky="w", pady=(12, 4))
-        move_options = ["MOVE_NONE", "TACKLE", "GROWL", "THUNDERBOLT", "SURF", "FLAMETHROWER"]
+        # Moves label and "Default moves" checkbox side by side in a frame
+        moves_label_frame = ttk.Frame(poke_fields_frame)
+        moves_label_frame.grid(row=5, column=0, columnspan=2, sticky="w", pady=(12, 4))
+        ttk.Label(moves_label_frame, text="Moves:").pack(side=tk.LEFT)
+        self.default_moves_var = tk.BooleanVar(value=False)
+        self.default_moves_check = ttk.Checkbutton(moves_label_frame, text="Default moves", variable=self.default_moves_var, state="disabled")
+        self.default_moves_check.pack(side=tk.LEFT, padx=10)
         self.move_cbs = []
         for i in range(4):
-            cb = ttk.Combobox(poke_fields_frame, values=move_options, state="readonly", width=16)
+            cb = ttk.Combobox(poke_fields_frame, values=[], state="disabled", width=16)
             cb.grid(row=6 + i, column=0, sticky="ew", pady=2, columnspan=2)
             self.move_cbs.append(cb)
 
@@ -348,7 +345,7 @@ class App(tk.Tk):
             col = 0 if idx < 3 else 1
             row = idx % 3
             ttk.Label(ivs_frame, text=stat+":").grid(row=row, column=col*2, sticky="e", padx=(6,1))
-            sb = tk.Spinbox(ivs_frame, from_=0, to=31, width=5)
+            sb = tk.Spinbox(ivs_frame, from_=0, to=31, width=5, state="disabled")
             sb.grid(row=row, column=col*2+1, sticky="w", pady=2)
             self.ivs_spinboxes[stat] = sb
 
@@ -361,7 +358,7 @@ class App(tk.Tk):
             col = 0 if idx < 3 else 1
             row = idx % 3
             ttk.Label(evs_frame, text=stat+":").grid(row=row, column=col*2, sticky="e", padx=(6,1))
-            sb = tk.Spinbox(evs_frame, from_=0, to=255, width=5)
+            sb = tk.Spinbox(evs_frame, from_=0, to=255, width=5, state="disabled")
             sb.grid(row=row, column=col*2+1, sticky="w", pady=2)
             self.evs_spinboxes[stat] = sb
 
@@ -378,21 +375,110 @@ class App(tk.Tk):
             set_last_opened_project(path)
             self.project_path = path
             self.status.config(text=f"Project opened: {path}")
-            self.populate_trainer_list()
-            self.populate_trainer_info()
-            self.populate_item_list()
-            self.populate_ai_flags()
+            self.check_expansion()
+            self.enable_trainer_editing()
+            self.enable_partymon_editing()
+            self.data_adquisition()
     
+    def enable_trainer_editing(self):
+        ''' Enable all UI elements to edit trainer data. '''
+        trainer_ui_comboboxes = [
+            self.trainer_pic_cb,
+            self.trainer_class_cb,
+            self.encounter_music_cb,
+        ] + self.item_cbs
+
+        trainer_ui_buttons = [
+            self.party_button_up,
+            self.party_button_down,
+            self.party_button_add,
+            self.party_button_remove
+        ]
+
+        self.menubar.entryconfig("Edit", state="normal")
+        self.name_entry.config(state="normal")
+        self.double_battle_check.config(state="normal")
+
+        for rb in self.radio_gender:
+            rb.config(state="normal")
+
+        for cb in trainer_ui_comboboxes:
+            cb.config(state="readonly")
+
+        for btn in trainer_ui_buttons:
+            btn.config(state=tk.NORMAL)
+
+
+    def enable_partymon_editing(self):
+        ''' Enable all UI elements to edit trainer data. '''
+        partymon_ui_comboboxes = [
+            self.species_cb,
+            self.trainer_class_cb,
+            self.held_item_cb,
+        ] + self.move_cbs
+
+        partymon_ui_spinners = [
+            self.level_sb,
+            self.ivs_spinboxes["HP"]
+        ]
+
+        if self.project_data.expansion:
+            partymon_ui_comboboxes.append(self.nature_cb)
+            partymon_ui_comboboxes.append(self.ability_cb)
+            partymon_ui_spinners += self.ivs_spinboxes["ATK"]
+            partymon_ui_spinners += self.ivs_spinboxes["DEF"]
+            partymon_ui_spinners += self.ivs_spinboxes["SPD"]
+            partymon_ui_spinners += self.ivs_spinboxes["SPATK"]
+            partymon_ui_spinners += self.ivs_spinboxes["SPDEF"]
+            partymon_ui_spinners += self.evs_spinboxes
+        else:
+            ivs_frame = self.ivs_spinboxes["HP"].master
+            for widget in ivs_frame.winfo_children():
+                if isinstance(widget, ttk.Label) and widget.cget("text") == "HP:":
+                    widget.config(text="Total:")
+
+        self.default_moves_check.config(state="normal")
+
+        for cb in partymon_ui_comboboxes:
+            cb.config(state="readonly")
+
+        for spinner in partymon_ui_spinners:
+            spinner.config(state="normal")
+    
+
+    def check_expansion(self):
+        ''' Check if the project is based on pokeemerald expansion. WIP. '''
+        pass
+
+    def data_adquisition(self):
+        ''' WIP '''
+        # Load all necessary data from the project files to populate the UI elements.
+        self.populate_trainer_list()
+        self.populate_trainer_info()
+        self.populate_item_list()
+        self.populate_ai_flags()
+        self.populate_species_list()
+        self.populate_moves_list()
+        # Only if the project is based on pokeemerald expansion
+        if self.project_data.expansion:
+            self.populate_nature_list()
 
     def populate_trainer_list(self):
         ''' Populate the trainer ID listbox from constants/opponents.h file. '''
+        trainer_id_list = []
+
         with open(os.path.join(self.project_path, PROJECT_FILES["opponents"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         for line in full_content:
             if line.startswith("#define TRAINER_"):
                 trainer_name = line.split()[1]
-                self.listbox_trainers_id.insert(tk.END, trainer_name)
+                trainer_id_list.append(trainer_name)
+
+        trainer_id_list = trainer_id_list[1:] # Remove TRAINER_NONE
+
+        for trainer_name in trainer_id_list:
+            self.listbox_trainers_id.insert(tk.END, trainer_name)
     
     def populate_trainer_info(self):
         ''' Populate the trainer info comboboxes from constants/trainers.h file. '''
@@ -419,16 +505,21 @@ class App(tk.Tk):
         self.encounter_music_cb['values'] = encounter_music_id_list
 
     def populate_item_list(self):
-        ''' Populate the item comboboxes from constants/items.h file. To be polished.'''
+        ''' Populate the item comboboxes from constants/items.h file.'''
         item_id_list = []
 
         with open(os.path.join(self.project_path, PROJECT_FILES["items"].lstrip("/")), "r") as f:
             full_content = f.readlines()
-        
+
         for line in full_content:
             if line.startswith("#define ITEM_"):
                 item_id = line.split()[1]
                 item_id_list.append(item_id)
+            
+        for line in full_content:
+            if line.startswith("#define ITEMS_COUNT"):
+                item_count = int(line.split()[2])
+                item_id_list = item_id_list[:item_count]
         
         for cb in self.item_cbs:
             cb['values'] = item_id_list
@@ -444,6 +535,64 @@ class App(tk.Tk):
             if line.startswith("#define AI_SCRIPT_"):
                 ai_flag_id = line.split()[1]
                 self.ai_flag_names.append(ai_flag_id)
+        
+        for i, flag in enumerate(self.ai_flag_names):
+            var = tk.BooleanVar()
+            cb = ttk.Checkbutton(self.ai_tab, text=flag.replace("AI_FLAG_", ""), variable=var)
+            cb.grid(row=1 + i//2, column=i%2, sticky="w", padx=2, pady=1)
+            self.ai_flag_vars.append((flag, var))
+        
+        if self.project_data.expansion:
+            self.preset_cb.config(state="readonly")
+            self.apply_btn.config(state="normal")
+
+    def populate_species_list(self):
+        ''' Populate the trainer info comboboxes from constants/species.h file. '''
+        species_id_list = []
+
+        with open(os.path.join(self.project_path, PROJECT_FILES["species"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+        
+        for line in full_content:
+            if line.startswith("#define SPECIES_"):
+                species_id = line.split()[1]
+                species_id_list.append(species_id)
+        
+        self.species_cb['values'] = species_id_list[1:] # Remove SPECIES_NONE
+    
+    def populate_moves_list(self):
+        ''' Populate the trainer info comboboxes from constants/moves.h file. '''
+        move_id_list = []
+
+        with open(os.path.join(self.project_path, PROJECT_FILES["moves"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+        
+        for line in full_content:
+            if line.startswith("#define MOVE_"):
+                move_id = line.split()[1]
+                move_id_list.append(move_id)
+        
+        for line in full_content:
+            if line.startswith("#define MOVES_COUNT"):
+                moves_count = int(line.split()[2])
+                move_id_list = move_id_list[:moves_count]
+        
+        for cb in self.move_cbs:
+            cb['values'] = move_id_list
+
+    def populate_nature_list(self):
+        ''' Populate the trainer info comboboxes from constants/pokemon.h file. '''
+        natures_id_list = []
+
+        with open(os.path.join(self.project_path, PROJECT_FILES["natures"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+        
+        for line in full_content:
+            if line.startswith("#define NATURE_"):
+                nature_id = line.split()[1]
+                natures_id_list.append(nature_id)
+        
+        self.nature_cb['values'] = natures_id_list
 
 if __name__ == "__main__":
     app = App()
