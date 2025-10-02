@@ -2,6 +2,7 @@
 
 import tkinter as tk
 import os
+from modules.classes import Trainer, Pokemon, AiFlags
 from tkinter import ttk
 from tkinter import filedialog
 
@@ -32,14 +33,16 @@ def set_last_opened_project(path):
         json.dump(config, f, indent=4)
 
 PROJECT_FILES = {
-    "battle_ai":    "/include/constants/battle_ai.h",
-    "items":        "/include/constants/items.h",
-    "moves":        "/include/constants/moves.h",
-    "opponents":    "/include/constants/opponents.h",
-    "natures":      "/include/constants/pokemon.h",
-    "species":      "/include/constants/species.h",
-    "trainer_info": "/include/constants/trainers.h",
-    "trainer_pics": "/graphics/trainers/front_pics"
+    "battle_ai":       "/include/constants/battle_ai.h",
+    "items":           "/include/constants/items.h",
+    "moves":           "/include/constants/moves.h",
+    "opponents":       "/include/constants/opponents.h",
+    "natures":         "/include/constants/pokemon.h",
+    "species":         "/include/constants/species.h",
+    "trainer_data":    "/src/data/trainers.h",
+    "trainer_info":    "/include/constants/trainers.h",
+    "trainer_parties": "/src/data/trainer_parties.h",
+    "trainer_pics":    "/graphics/trainers/front_pics"
 }
 
 TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "trainer_placeholder.png")
@@ -117,6 +120,7 @@ class App(tk.Tk):
         listbox_pack_frame = tk.Frame(listbox_frame)
         listbox_pack_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.listbox_trainers_id = tk.Listbox(listbox_pack_frame, selectmode=tk.SINGLE)
+        self.listbox_trainers_id.bind("<<ListboxSelect>>", self.update_trainer_fields)
         scrollbar_x = tk.Scrollbar(listbox_pack_frame, orient=tk.HORIZONTAL, command=self.listbox_trainers_id.xview)
         self.listbox_trainers_id.config(xscrollcommand=scrollbar_x.set)
         self.listbox_trainers_id.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -135,7 +139,7 @@ class App(tk.Tk):
         col2 = tk.Frame(main_frame, **col2_kwargs)
         col2.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        gender_options = ["MALE", "FEMALE"]
+        self.gender_options = ["MALE", "FEMALE"]
 
         # Show trainer picture at the top left
         try:
@@ -161,11 +165,11 @@ class App(tk.Tk):
         row += 1
 
         # Radio buttons for gender. This will be saved in self.current_trainer_gender_var.
-        self.current_trainer_gender_var = tk.StringVar(value=gender_options[0])
+        self.current_trainer_gender_var = tk.StringVar(value=self.gender_options[0])
         gender_frame = ttk.Frame(col2)
         gender_frame.grid(row=row, column=0, columnspan=2, sticky="w", padx=10, pady=2)
         self.radio_gender = []
-        for i, opt in enumerate(gender_options):
+        for i, opt in enumerate(self.gender_options):
             rb = ttk.Radiobutton(gender_frame, text=opt, variable=self.current_trainer_gender_var, value=opt, state="disabled")
             self.radio_gender.append(rb)
             rb.pack(side=tk.LEFT, padx=5)
@@ -462,6 +466,8 @@ class App(tk.Tk):
         # Only if the project is based on pokeemerald expansion
         if self.project_data.expansion:
             self.populate_nature_list()
+        
+        self.get_trainer_data()
 
     def populate_trainer_list(self):
         ''' Populate the trainer ID listbox from constants/opponents.h file. '''
@@ -523,8 +529,12 @@ class App(tk.Tk):
         
         for cb in self.item_cbs:
             cb['values'] = item_id_list
+            if item_id_list:
+                cb.set(item_id_list[0])
         
         self.held_item_cb['values'] = item_id_list
+        if item_id_list:
+            self.held_item_cb.set(item_id_list[0])
 
     def populate_ai_flags(self):
         ''' Populate the AI flags from constants/battle_ai.h file. '''
@@ -593,6 +603,94 @@ class App(tk.Tk):
                 natures_id_list.append(nature_id)
         
         self.nature_cb['values'] = natures_id_list
+
+    def get_trainer_data(self):
+        ''' Get the trainer info from data/trainers.h file and process it to self.project_data. '''
+
+        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_data"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+        
+        # .partyFlags - It will be adquired from party macros
+        # .trainerClass
+        # .encounterMusic_gender
+        # .trainerPic
+        # .trainerName
+        # .items
+        # .doubleBattle
+        # .aiFlags
+        # .partySize - It will be adquired from party macros
+        # .party
+
+        new_trainer = None
+
+        for line in full_content:
+            data = line.strip().split(" ")
+            field = data[0]
+            if field[:9] == '[TRAINER_':
+                new_trainer = Trainer(line.strip().split(" ")[0][1:-1])
+            elif field == '.trainerClass':
+                new_trainer.trainer_class = data[2].strip('",')
+            elif field == '.encounterMusic_gender':
+                new_trainer.gender = self.gender_options[0]
+                for stuff in data[2:]:
+                    if stuff.startswith("TRAINER_ENCOUNTER_MUSIC_"):
+                        new_trainer.encounter_music = stuff.strip('",')
+                    elif stuff == "F_TRAINER_FEMALE":
+                        new_trainer.gender = self.gender_options[1]
+            elif field == '.trainerPic':
+                new_trainer.trainer_pic = data[2].strip('",')
+            elif field == '.trainerName':
+                new_trainer.name = data[2].strip('",_()')
+            elif field == '.items':
+                for item in data[2:]:
+                    if item.strip('",{}') != '':
+                        new_trainer.items.append(item.strip('",{}'))
+                while len(new_trainer.items) < 4:
+                    new_trainer.items.append('ITEM_NONE')
+            elif field == '.doubleBattle':
+                if data[2] == 'TRUE,':
+                    new_trainer.double_battle = True
+                else:
+                    new_trainer.double_battle = False
+            elif field == '},':
+                self.project_data.trainers.append(new_trainer)
+                new_trainer = None
+        
+
+        for trainer in self.project_data.trainers[80:90]:
+            print(trainer.id + ', ' + trainer.trainer_class + ', ' + trainer.encounter_music + ', ' + trainer.gender + ', ' + trainer.trainer_pic + ', ' + trainer.name)
+            print('  Items: ' + ', '.join(trainer.items))
+            print('  Double Battle: ' + str(trainer.double_battle))
+
+    def update_trainer_fields(self, event):
+        ''' Update the trainer fields in the UI with the data from self.current_trainer.'''
+        selected_idx = self.listbox_trainers_id.curselection()
+        if selected_idx:
+            current_trainer = self.project_data.trainers[selected_idx[0] + 1] # +1 to skip TRAINER_NONE
+            # Insert the ID
+            self.id_entry.config(state="normal")
+            self.id_entry.delete(0, tk.END)
+            self.id_entry.insert(0, current_trainer.id)
+            self.id_entry.config(state="readonly")
+            # Insert the name
+            self.name_entry.delete(0, tk.END)
+            self.name_entry.insert(0, current_trainer.name)
+            # Set the gender
+            self.current_trainer_gender_var.set(current_trainer.gender)
+            for i, opt in enumerate(self.gender_options):
+                self.radio_gender[i].config(variable=self.current_trainer_gender_var, value=opt)
+            # Set the trainer pic
+            self.trainer_pic_cb.set(current_trainer.trainer_pic)
+            # Set the trainer class
+            self.trainer_class_cb.set(current_trainer.trainer_class)
+            # Set the encounter music
+            self.encounter_music_cb.set(current_trainer.encounter_music)
+            # Set the double battle
+            self.double_battle_var.set(current_trainer.double_battle)
+            # Set the items
+            for i in range(4):
+                if i < len(current_trainer.items):
+                    self.item_cbs[i].set(current_trainer.items[i])
 
 if __name__ == "__main__":
     app = App()
