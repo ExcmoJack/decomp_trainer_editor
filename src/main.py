@@ -2,7 +2,7 @@
 
 import tkinter as tk
 import os
-from modules.classes import Trainer, Pokemon, AiFlags
+from modules.classes import Trainer, Pokemon, AiFlagList
 from tkinter import ttk
 from tkinter import filedialog
 
@@ -53,7 +53,7 @@ class ProjectData():
     def __init__(self):
         self.trainers = []
         self.expansion = False
-
+        self.ai_flags = AiFlagList()
 
 class App(tk.Tk):
     def __init__(self):
@@ -62,8 +62,6 @@ class App(tk.Tk):
         self.geometry("1366x768")
         self.project_path = None
         self.project_data = ProjectData()
-        self.ai_flag_names = []
-
         self.showdown_type_output = False
 
         ############
@@ -541,15 +539,18 @@ class App(tk.Tk):
         with open(os.path.join(self.project_path, PROJECT_FILES["battle_ai"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
+        ai_flag = None
+
         for line in full_content:
             if line.startswith("#define AI_SCRIPT_"):
-                ai_flag_id = line.split()[1]
-                self.ai_flag_names.append(ai_flag_id)
+                ai_flag = line.split()[1]
+                self.project_data.ai_flags.add_flag(ai_flag)
+                ai_flag = None
         
-        for i, flag in enumerate(self.ai_flag_names):
+        for i, flag in enumerate(self.project_data.ai_flags.flags):
             var = tk.BooleanVar()
-            cb = ttk.Checkbutton(self.ai_tab, text=flag.replace("AI_FLAG_", ""), variable=var)
-            cb.grid(row=1 + i//2, column=i%2, sticky="w", padx=2, pady=1)
+            checkbox = ttk.Checkbutton(self.ai_tab, text=flag[10:], variable=var)
+            checkbox.grid(row=1 + i//2, column=i%2, sticky="w", padx=2, pady=1)
             self.ai_flag_vars.append((flag, var))
         
         if self.project_data.expansion:
@@ -652,15 +653,20 @@ class App(tk.Tk):
                     new_trainer.double_battle = True
                 else:
                     new_trainer.double_battle = False
+            elif field == '.aiFlags':
+                for flag in data[2:]:
+                    if self.project_data.ai_flags.is_flag(flag.strip('",{}')):
+                        new_trainer.ai_flags.append(flag.strip('",'))
             elif field == '},':
                 self.project_data.trainers.append(new_trainer)
                 new_trainer = None
         
 
         for trainer in self.project_data.trainers[80:90]:
-            print(trainer.id + ', ' + trainer.trainer_class + ', ' + trainer.encounter_music + ', ' + trainer.gender + ', ' + trainer.trainer_pic + ', ' + trainer.name)
+            print(trainer.id + ', ' + trainer.trainer_class)
             print('  Items: ' + ', '.join(trainer.items))
-            print('  Double Battle: ' + str(trainer.double_battle))
+            ai_desc = [flag for flag in trainer.ai_flags]
+            print('  AI flags: ' + str([(flag) for flag in ai_desc]))
 
     def update_trainer_fields(self, event):
         ''' Update the trainer fields in the UI with the data from self.current_trainer.'''
@@ -691,6 +697,17 @@ class App(tk.Tk):
             for i in range(4):
                 if i < len(current_trainer.items):
                     self.item_cbs[i].set(current_trainer.items[i])
+            
+            # Set the AI flags
+            for flag, var in self.ai_flag_vars:
+                flag_exists = False
+                for trainer_flag in current_trainer.ai_flags:
+                    if flag == trainer_flag:
+                        flag_exists = True
+                    else:
+                        flag_exists = flag_exists or False
+
+                var.set(flag_exists)
 
 if __name__ == "__main__":
     app = App()
