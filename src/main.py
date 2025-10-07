@@ -466,6 +466,13 @@ class App(tk.Tk):
             self.populate_nature_list()
         
         self.get_trainer_data()
+        if self.listbox_trainers_id.size() > 0:
+            self.listbox_trainers_id.select_set(0, 0)
+            self.listbox_trainers_id.event_generate("<<ListboxSelect>>")
+        
+        if self.party_listbox.size() > 0:
+            self.party_listbox.select_set(0, 0)
+            self.party_listbox.event_generate("<<ListboxSelect>>")
 
     def populate_trainer_list(self):
         ''' Populate the trainer ID listbox from constants/opponents.h file. '''
@@ -623,12 +630,12 @@ class App(tk.Tk):
         # .party
 
         new_trainer = None
-
         for line in full_content:
             data = line.strip().split(" ")
             field = data[0]
             if field[:9] == '[TRAINER_':
                 new_trainer = Trainer(line.strip().split(" ")[0][1:-1])
+                uses_party_macro = True
             elif field == '.trainerClass':
                 new_trainer.trainer_class = data[2].strip('",')
             elif field == '.encounterMusic_gender':
@@ -657,16 +664,81 @@ class App(tk.Tk):
                 for flag in data[2:]:
                     if self.project_data.ai_flags.is_flag(flag.strip('",{}')):
                         new_trainer.ai_flags.append(flag.strip('",'))
+            elif field == '.partyFlags':
+                uses_party_macro = False
+            elif field == '.partySize':
+                uses_party_macro = False
+            elif field == '.party':
+                if uses_party_macro:
+                    party_pointer = data[2].split('(')[1].strip('),')
+                    new_trainer.party_name = party_pointer
+                    new_trainer.pokemon = self.get_partymon_data(party_pointer)
             elif field == '},':
                 self.project_data.trainers.append(new_trainer)
                 new_trainer = None
         
-
-        for trainer in self.project_data.trainers[80:90]:
+        for trainer in self.project_data.trainers[265:273]:
             print(trainer.id + ', ' + trainer.trainer_class)
-            print('  Items: ' + ', '.join(trainer.items))
+            print('  Party: ' + trainer.party_name)
             ai_desc = [flag for flag in trainer.ai_flags]
             print('  AI flags: ' + str([(flag) for flag in ai_desc]))
+            for mon in trainer.pokemon:
+                print('  ' + mon.species + ': Lv.' + str(mon.level) + ', ' + mon.held_item + ', ivs: ' + str(mon.iv) + ', ' + mon.moves[0] + ', ' + mon.moves[1] + ', ' + mon.moves[2] + ', ' + mon.moves[3])
+
+    def get_partymon_data(self, pointer):
+        ''' Get the party Pokémon data from data/trainer_parties.h file and process it to return as a Pokémon list. '''
+
+        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_parties"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+
+        party = []
+        new_mon = None
+        
+        party_pointer_found = False
+        for line in full_content:
+            data = line.strip().split(" ")
+            field = data[0]
+            if line.strip().startswith('static const struct') and (pointer + '[]') in line.split(" "):
+                party_pointer_found = True
+            if party_pointer_found:
+                if field == '}' or field == '},':
+                    new_mon = Pokemon(mon_struct['species'])
+                    new_mon.level = int(mon_struct['lvl'])
+                    new_mon.held_item = mon_struct['heldItem']
+                    new_mon.iv = int(mon_struct['iv'])
+                    new_mon.moves = mon_struct['moves']
+                    party.append(new_mon)
+                    new_mon = None
+                    mon_struct = None
+                if field == '{':
+                    mon_struct = {
+                        'iv': '', # Somehow up to 255
+                        'lvl': '',
+                        'species': '',
+                        'heldItem': 'ITEM_NONE',
+                        'moves': ['MOVE_NONE', 'MOVE_NONE', 'MOVE_NONE', 'MOVE_NONE']
+                    }
+                if field == '.iv':
+                    mon_struct['iv'] = int(data[2].strip(','))
+                if field == '.lvl':
+                    mon_struct['lvl'] = int(data[2].strip(','))
+                if field == '.species':
+                    mon_struct['species'] = data[2].strip('",')
+                if field == '.heldItem':
+                    mon_struct['heldItem'] = data[2].strip('",')
+                if field == '.moves':
+                    moves = []
+                    for move in data[2:]:
+                        if move.strip('",{}') != '':
+                            moves.append(move.strip('",{}'))
+                    while len(moves) < 4:
+                        moves.append('MOVE_NONE')
+                    mon_struct['moves'] = moves
+                if line.strip().startswith('};'):
+                    party_pointer_found = False
+    
+        return party
+
 
     def update_trainer_fields(self, event):
         ''' Update the trainer fields in the UI with the data from self.current_trainer.'''
@@ -691,8 +763,13 @@ class App(tk.Tk):
             self.trainer_class_cb.set(current_trainer.trainer_class)
             # Set the encounter music
             self.encounter_music_cb.set(current_trainer.encounter_music)
-            # Set the double battle
+            # Set the double battle checkbox
             self.double_battle_var.set(current_trainer.double_battle)
+            # Set the party list
+            self.party_listbox.delete(0, tk.END)
+            for mon in current_trainer.pokemon:
+                self.party_listbox.insert(tk.END, mon.species)
+
             # Set the items
             for i in range(4):
                 if i < len(current_trainer.items):
