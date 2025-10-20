@@ -42,8 +42,8 @@ PROJECT_FILES = {
     "trainer_data":     "/src/data/trainers.h",
     "trainer_info":     "/include/constants/trainers.h",
     "trainer_parties":  "/src/data/trainer_parties.h",
-    "trainer_pics_dir": "/src/data/trainer_graphics/front_pic_tables.h",
-    "trainer_pics_ptr": "/src/data/graphics/trainers.h"
+    "trainer_pics_ptr": "/src/data/trainer_graphics/front_pic_tables.h",
+    "trainer_pics_dir": "/src/data/graphics/trainers.h"
 }
 
 TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "trainer_placeholder.png")
@@ -466,6 +466,7 @@ class App(tk.Tk):
         self.populate_ai_flags()
         self.populate_species_list()
         self.populate_moves_list()
+        self.get_trainer_pic_list()
         # Only if the project is based on pokeemerald expansion
         if self.project_data.expansion:
             self.populate_nature_list()
@@ -613,6 +614,29 @@ class App(tk.Tk):
         
         self.nature_cb['values'] = natures_id_list
 
+    def get_trainer_pic_list(self):
+        self.trainer_pics = []
+        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_pics_ptr"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+    
+        for line in full_content:
+            if line.strip().startswith('TRAINER_SPRITE'):
+                data = line.strip()[15:-2]
+                entry = data.split(', ')
+                new_pic = {'id': 'TRAINER_PIC_' + entry[0], 'pointer': entry[1], 'path': ''}
+                self.trainer_pics.append(new_pic)
+
+        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_pics_dir"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+        
+        for line in full_content:
+            if line.strip().startswith('const u32 gTrainerFrontPic_'):
+                dir_info = line.strip()[10:-3].replace('[]', '').replace('INCBIN_U32("', '').replace('.4bpp.lz', '.png').split(' = ')
+                for pic in self.trainer_pics:
+                    if pic['pointer'] == dir_info[0]:
+                        pic['path'] = dir_info[1]
+
+
     def get_trainer_data(self):
         ''' Get the trainer info from data/trainers.h file and process it to self.project_data. '''
 
@@ -686,6 +710,7 @@ class App(tk.Tk):
         #     for mon in trainer.pokemon:
         #         print('  ' + mon.species + ': Lv.' + str(mon.level) + ', ' + mon.held_item + ', ivs: ' + str(mon.iv) + ', ' + mon.moves[0] + ', ' + mon.moves[1] + ', ' + mon.moves[2] + ', ' + mon.moves[3])
 
+
     def get_partymon_data(self, pointer):
         ''' Get the party Pokémon data from data/trainer_parties.h file and process it to return as a Pokémon list. '''
 
@@ -756,6 +781,12 @@ class App(tk.Tk):
             self.radio_gender[i].config(variable=self.current_trainer_gender_var, value=opt)
         # Set the trainer pic
         self.trainer_pic_cb.set(self.project_data.trainers[trainer_id].trainer_pic)
+        try:
+            pic_dir = os.path.join(self.project_path, self.get_trainer_pic_path_from_id(self.project_data.trainers[trainer_id].trainer_pic))
+            img_path = pic_dir if os.path.exists(pic_dir) else TRAINER_PIC_PLACEHOLDER
+            self.trainer_img.config(file=img_path)
+        except Exception:
+            pass
         # Set the trainer class
         self.trainer_class_cb.set(self.project_data.trainers[trainer_id].trainer_class)
         # Set the encounter music
@@ -840,6 +871,11 @@ class App(tk.Tk):
             if id == i:
                 return i
 
+
+    def get_trainer_pic_path_from_id(self, id):
+        for pic in self.trainer_pics:
+            if pic['id'] == id:
+                return pic['path']
 
 if __name__ == "__main__":
     app = App()
