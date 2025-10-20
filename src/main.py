@@ -33,16 +33,17 @@ def set_last_opened_project(path):
         json.dump(config, f, indent=4)
 
 PROJECT_FILES = {
-    "battle_ai":       "/include/constants/battle_ai.h",
-    "items":           "/include/constants/items.h",
-    "moves":           "/include/constants/moves.h",
-    "opponents":       "/include/constants/opponents.h",
-    "natures":         "/include/constants/pokemon.h",
-    "species":         "/include/constants/species.h",
-    "trainer_data":    "/src/data/trainers.h",
-    "trainer_info":    "/include/constants/trainers.h",
-    "trainer_parties": "/src/data/trainer_parties.h",
-    "trainer_pics":    "/graphics/trainers/front_pics"
+    "battle_ai":        "/include/constants/battle_ai.h",
+    "items":            "/include/constants/items.h",
+    "moves":            "/include/constants/moves.h",
+    "opponents":        "/include/constants/opponents.h",
+    "natures":          "/include/constants/pokemon.h",
+    "species":          "/include/constants/species.h",
+    "trainer_data":     "/src/data/trainers.h",
+    "trainer_info":     "/include/constants/trainers.h",
+    "trainer_parties":  "/src/data/trainer_parties.h",
+    "trainer_pics_dir": "/src/data/trainer_graphics/front_pic_tables.h",
+    "trainer_pics_ptr": "/src/data/graphics/trainers.h"
 }
 
 TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "trainer_placeholder.png")
@@ -63,6 +64,8 @@ class App(tk.Tk):
         self.project_path = None
         self.project_data = ProjectData()
         self.showdown_type_output = False
+        self.current_trainer_id = 1
+        self.current_trainer_mon = 0
 
         ############
         # MENU BAR #
@@ -118,7 +121,7 @@ class App(tk.Tk):
         listbox_pack_frame = tk.Frame(listbox_frame)
         listbox_pack_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.listbox_trainers_id = tk.Listbox(listbox_pack_frame, selectmode=tk.SINGLE)
-        self.listbox_trainers_id.bind("<<ListboxSelect>>", self.update_trainer_fields)
+        self.listbox_trainers_id.bind("<<ListboxSelect>>", self.update_trainer_fields_trigger)
         scrollbar_x = tk.Scrollbar(listbox_pack_frame, orient=tk.HORIZONTAL, command=self.listbox_trainers_id.xview)
         self.listbox_trainers_id.config(xscrollcommand=scrollbar_x.set)
         self.listbox_trainers_id.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
@@ -218,6 +221,8 @@ class App(tk.Tk):
         ttk.Label(party_frame, text="Party").pack(anchor="w", pady=(0, 5))
         self.party_listbox = tk.Listbox(party_frame, height=6)
         self.party_listbox.pack(fill=tk.BOTH, expand=True)
+        self.party_listbox.bind("<<ListboxSelect>>", self.update_mon_fields_trigger)
+
 
         # Now this buttons may allow to move up/down the selected Pokémon in the party, add a new one or remove the selected one.
         # They must be disabled if there is no project opened.
@@ -469,10 +474,6 @@ class App(tk.Tk):
         if self.listbox_trainers_id.size() > 0:
             self.listbox_trainers_id.select_set(0, 0)
             self.listbox_trainers_id.event_generate("<<ListboxSelect>>")
-        
-        if self.party_listbox.size() > 0:
-            self.party_listbox.select_set(0, 0)
-            self.party_listbox.event_generate("<<ListboxSelect>>")
 
     def populate_trainer_list(self):
         ''' Populate the trainer ID listbox from constants/opponents.h file. '''
@@ -677,13 +678,13 @@ class App(tk.Tk):
                 self.project_data.trainers.append(new_trainer)
                 new_trainer = None
         
-        for trainer in self.project_data.trainers[265:273]:
-            print(trainer.id + ', ' + trainer.trainer_class)
-            print('  Party: ' + trainer.party_name)
-            ai_desc = [flag for flag in trainer.ai_flags]
-            print('  AI flags: ' + str([(flag) for flag in ai_desc]))
-            for mon in trainer.pokemon:
-                print('  ' + mon.species + ': Lv.' + str(mon.level) + ', ' + mon.held_item + ', ivs: ' + str(mon.iv) + ', ' + mon.moves[0] + ', ' + mon.moves[1] + ', ' + mon.moves[2] + ', ' + mon.moves[3])
+        # for trainer in self.project_data.trainers[265:273]:
+        #     print(trainer.id + ', ' + trainer.trainer_class)
+        #     print('  Party: ' + trainer.party_name)
+        #     ai_desc = [flag for flag in trainer.ai_flags]
+        #     print('  AI flags: ' + str([(flag) for flag in ai_desc]))
+        #     for mon in trainer.pokemon:
+        #         print('  ' + mon.species + ': Lv.' + str(mon.level) + ', ' + mon.held_item + ', ivs: ' + str(mon.iv) + ', ' + mon.moves[0] + ', ' + mon.moves[1] + ', ' + mon.moves[2] + ', ' + mon.moves[3])
 
     def get_partymon_data(self, pointer):
         ''' Get the party Pokémon data from data/trainer_parties.h file and process it to return as a Pokémon list. '''
@@ -740,51 +741,105 @@ class App(tk.Tk):
         return party
 
 
-    def update_trainer_fields(self, event):
+    def update_trainer_fields(self, trainer_id):
+        # Insert the ID
+        self.id_entry.config(state="normal")
+        self.id_entry.delete(0, tk.END)
+        self.id_entry.insert(0, self.project_data.trainers[trainer_id].id)
+        self.id_entry.config(state="readonly")
+        # Insert the name
+        self.name_entry.delete(0, tk.END)
+        self.name_entry.insert(0, self.project_data.trainers[trainer_id].name)
+        # Set the gender
+        self.current_trainer_gender_var.set(self.project_data.trainers[trainer_id].gender)
+        for i, opt in enumerate(self.gender_options):
+            self.radio_gender[i].config(variable=self.current_trainer_gender_var, value=opt)
+        # Set the trainer pic
+        self.trainer_pic_cb.set(self.project_data.trainers[trainer_id].trainer_pic)
+        # Set the trainer class
+        self.trainer_class_cb.set(self.project_data.trainers[trainer_id].trainer_class)
+        # Set the encounter music
+        self.encounter_music_cb.set(self.project_data.trainers[trainer_id].encounter_music)
+        # Set the double battle checkbox
+        self.double_battle_var.set(self.project_data.trainers[trainer_id].double_battle)
+        # Set the party list
+        self.party_listbox.delete(0, tk.END)
+        for mon in self.project_data.trainers[trainer_id].pokemon:
+            self.party_listbox.insert(tk.END, mon.species)
+
+        # Set the items
+        for i in range(4):
+            if i < len(self.project_data.trainers[trainer_id].items):
+                self.item_cbs[i].set(self.project_data.trainers[trainer_id].items[i])
+        
+        # Set the AI flags
+        for flag, var in self.ai_flag_vars:
+            flag_exists = False
+            for trainer_flag in self.project_data.trainers[trainer_id].ai_flags:
+                if flag == trainer_flag:
+                    flag_exists = True
+                else:
+                    flag_exists = flag_exists or False
+
+            var.set(flag_exists)
+
+    
+    def update_trainer_fields_trigger(self, event):
         ''' Update the trainer fields in the UI with the data from self.current_trainer.'''
         selected_idx = self.listbox_trainers_id.curselection()
         if selected_idx:
-            current_trainer = self.project_data.trainers[selected_idx[0] + 1] # +1 to skip TRAINER_NONE
-            # Insert the ID
-            self.id_entry.config(state="normal")
-            self.id_entry.delete(0, tk.END)
-            self.id_entry.insert(0, current_trainer.id)
-            self.id_entry.config(state="readonly")
-            # Insert the name
-            self.name_entry.delete(0, tk.END)
-            self.name_entry.insert(0, current_trainer.name)
-            # Set the gender
-            self.current_trainer_gender_var.set(current_trainer.gender)
-            for i, opt in enumerate(self.gender_options):
-                self.radio_gender[i].config(variable=self.current_trainer_gender_var, value=opt)
-            # Set the trainer pic
-            self.trainer_pic_cb.set(current_trainer.trainer_pic)
-            # Set the trainer class
-            self.trainer_class_cb.set(current_trainer.trainer_class)
-            # Set the encounter music
-            self.encounter_music_cb.set(current_trainer.encounter_music)
-            # Set the double battle checkbox
-            self.double_battle_var.set(current_trainer.double_battle)
-            # Set the party list
-            self.party_listbox.delete(0, tk.END)
-            for mon in current_trainer.pokemon:
-                self.party_listbox.insert(tk.END, mon.species)
+            self.current_trainer_id = self.get_trainer_from_selected_id(selected_idx[0] + 1) # +1 to skip TRAINER_NONE
+            self.update_trainer_fields(self.current_trainer_id)
+            if self.party_listbox.size() > 0:
+                self.party_listbox.select_set(0, 0)
+                self.party_listbox.event_generate("<<ListboxSelect>>")
+    
+    def update_mon_fields(self, mon_id):
+        # Set the mon species
+        self.species_cb.set(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].species)
+        # Set the level
+        self.level_sb.delete(0, tk.END)
+        self.level_sb.insert(0, self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].level)
+        # Set the held item
+        self.held_item_cb.set(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].held_item)
+        # Set the moves
+        if self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].moves == ['MOVE_NONE', 'MOVE_NONE', 'MOVE_NONE', 'MOVE_NONE']:
+            self.default_moves_var.set(True)
+        else:
+            self.default_moves_var.set(False)
+        
+        for i in range(4):
+            self.move_cbs[i].set(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].moves[i])
+        # Set the IVs
+        self.ivs_spinboxes['HP'].delete(0, tk.END)
+        self.ivs_spinboxes['HP'].insert(0, self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].iv)
 
-            # Set the items
-            for i in range(4):
-                if i < len(current_trainer.items):
-                    self.item_cbs[i].set(current_trainer.items[i])
-            
-            # Set the AI flags
-            for flag, var in self.ai_flag_vars:
-                flag_exists = False
-                for trainer_flag in current_trainer.ai_flags:
-                    if flag == trainer_flag:
-                        flag_exists = True
-                    else:
-                        flag_exists = flag_exists or False
 
-                var.set(flag_exists)
+    def update_mon_fields_trigger(self, event):
+        selected_idx = self.party_listbox.curselection()
+        if selected_idx:
+            self.current_trainer_mon = self.get_mon_from_selected_id(selected_idx[0])
+            self.update_mon_fields(self.current_trainer_mon)
+
+
+    def get_trainer_from_selected_id(self, id):
+        '''This function does innecessary operations to get the same ID it's provided, just because using the selected index
+           will make the program crazy. TkInter uses the same focus for both listboxes, so somehow they collide and gets
+           changed in runtime. We better use this functions to get a constant integer as ID.'''
+        index = 0
+        trainer_id = self.project_data.trainers[id].id
+        for trainer in self.project_data.trainers:
+            if trainer_id == trainer.id:
+                return index
+            else:
+                index += 1
+    
+
+    def get_mon_from_selected_id(self, id):
+        for i in range(6):
+            if id == i:
+                return i
+
 
 if __name__ == "__main__":
     app = App()
