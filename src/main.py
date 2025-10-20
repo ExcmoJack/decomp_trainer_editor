@@ -35,6 +35,8 @@ def set_last_opened_project(path):
 PROJECT_FILES = {
     "battle_ai":        "/include/constants/battle_ai.h",
     "items":            "/include/constants/items.h",
+    "mon_pics_dir":     "/src/data/graphics/pokemon.h",
+    "mon_pics_ptr":     "/src/data/pokemon_graphics/still_front_pic_table.h",
     "moves":            "/include/constants/moves.h",
     "opponents":        "/include/constants/opponents.h",
     "natures":          "/include/constants/pokemon.h",
@@ -42,8 +44,8 @@ PROJECT_FILES = {
     "trainer_data":     "/src/data/trainers.h",
     "trainer_info":     "/include/constants/trainers.h",
     "trainer_parties":  "/src/data/trainer_parties.h",
-    "trainer_pics_ptr": "/src/data/trainer_graphics/front_pic_tables.h",
-    "trainer_pics_dir": "/src/data/graphics/trainers.h"
+    "trainer_pics_dir": "/src/data/graphics/trainers.h",
+    "trainer_pics_ptr": "/src/data/trainer_graphics/front_pic_tables.h"
 }
 
 TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "trainer_placeholder.png")
@@ -467,6 +469,7 @@ class App(tk.Tk):
         self.populate_species_list()
         self.populate_moves_list()
         self.get_trainer_pic_list()
+        self.get_mon_pic_list()
         # Only if the project is based on pokeemerald expansion
         if self.project_data.expansion:
             self.populate_nature_list()
@@ -633,6 +636,29 @@ class App(tk.Tk):
             if line.strip().startswith('const u32 gTrainerFrontPic_'):
                 dir_info = line.strip()[10:-3].replace('[]', '').replace('INCBIN_U32("', '').replace('.4bpp.lz', '.png').split(' = ')
                 for pic in self.trainer_pics:
+                    if pic['pointer'] == dir_info[0]:
+                        pic['path'] = dir_info[1]
+    
+
+    def get_mon_pic_list(self):
+        self.mon_pics = []
+        with open(os.path.join(self.project_path, PROJECT_FILES["mon_pics_ptr"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+    
+        for line in full_content:
+            if line.strip().startswith('SPECIES_SPRITE('):
+                data = line.strip()[15:-2].replace(' ', '')
+                entry = data.split(',')
+                new_pic = {'species': 'SPECIES_' + entry[0], 'pointer': entry[1], 'path': ''}
+                self.mon_pics.append(new_pic)
+
+        with open(os.path.join(self.project_path, PROJECT_FILES["mon_pics_dir"].lstrip("/")), "r") as f:
+            full_content = f.readlines()
+        
+        for line in full_content:
+            if line.strip().startswith('const u32 gMonStillFrontPic_'):
+                dir_info = line.strip()[10:-3].replace('[]', '').replace('INCBIN_U32("', '').replace('.4bpp.lz', '.png').split(' = ')
+                for pic in self.mon_pics:
                     if pic['pointer'] == dir_info[0]:
                         pic['path'] = dir_info[1]
 
@@ -824,10 +850,18 @@ class App(tk.Tk):
             if self.party_listbox.size() > 0:
                 self.party_listbox.select_set(0, 0)
                 self.party_listbox.event_generate("<<ListboxSelect>>")
-    
+
+
     def update_mon_fields(self, mon_id):
         # Set the mon species
         self.species_cb.set(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].species)
+        # Set the mon pic
+        try:
+            pic_dir = os.path.join(self.project_path, self.get_mon_pic_path_from_species(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].species))
+            img_path = pic_dir if os.path.exists(pic_dir) else MON_PIC_PLACEHOLDER
+            self.mon_img.config(file=img_path)
+        except Exception:
+            pass
         # Set the level
         self.level_sb.delete(0, tk.END)
         self.level_sb.insert(0, self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].level)
@@ -875,6 +909,11 @@ class App(tk.Tk):
     def get_trainer_pic_path_from_id(self, id):
         for pic in self.trainer_pics:
             if pic['id'] == id:
+                return pic['path']
+            
+    def get_mon_pic_path_from_species(self, species):
+        for pic in self.mon_pics:
+            if pic['species'] == species:
                 return pic['path']
 
 if __name__ == "__main__":
