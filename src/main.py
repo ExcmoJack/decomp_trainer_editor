@@ -68,8 +68,6 @@ class App(tk.Tk):
         self.showdown_type_output = False
         self.current_trainer_id = 1
         self.current_trainer_mon = 0
-        self.saved_trainer = True
-        self.saved_mon = True
 
         ############
         # MENU BAR #
@@ -285,6 +283,9 @@ class App(tk.Tk):
         self.places_listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
         row += 1
 
+        self.save_trainer_button = ttk.Button(col2, text="Save Trainer", state=tk.DISABLED, command=self.save_trainer_data)
+        self.save_trainer_button.grid(row=row, column=0, columnspan=2, sticky="ew", padx=10, pady=(10, 5))
+
         ####################################
         # COLUMN 3 - Pokemon configuration #
         ####################################
@@ -310,6 +311,7 @@ class App(tk.Tk):
         ttk.Label(poke_fields_frame, text="Species:").grid(row=1, column=0, sticky="w", pady=4)
         self.species_cb = ttk.Combobox(poke_fields_frame, values=[], state="disabled")
         self.species_cb.grid(row=1, column=1, sticky="ew", pady=4)
+        self.species_cb.bind("<<ComboboxSelected>>", self.set_mon_pic_trigger)
 
         # Level
         ttk.Label(poke_fields_frame, text="Level:").grid(row=2, column=0, sticky="w", pady=4)
@@ -408,7 +410,8 @@ class App(tk.Tk):
             self.party_button_up,
             self.party_button_down,
             self.party_button_add,
-            self.party_button_remove
+            self.party_button_remove,
+            self.save_trainer_button
         ]
 
         self.menubar.entryconfig("Edit", state="normal")
@@ -837,9 +840,7 @@ class App(tk.Tk):
         # Set the double battle checkbox
         self.double_battle_var.set(self.project_data.trainers[trainer_id].double_battle)
         # Set the party list
-        self.party_listbox.delete(0, tk.END)
-        for mon in self.project_data.trainers[trainer_id].pokemon:
-            self.party_listbox.insert(tk.END, mon.species)
+        self.update_party_list(trainer_id)
 
         # Set the items
         for i in range(4):
@@ -860,8 +861,6 @@ class App(tk.Tk):
     
     def update_trainer_fields_trigger(self, event):
         ''' Update the trainer fields in the UI with the data from self.current_trainer.'''
-        # Update mon data here
-        # self.save_trainer_data()
         selected_idx = self.listbox_trainers_id.curselection()
         if selected_idx:
             self.current_trainer_id = self.get_trainer_from_selected_id(selected_idx[0] + 1) # +1 to skip TRAINER_NONE
@@ -871,16 +870,17 @@ class App(tk.Tk):
                 self.party_listbox.event_generate("<<ListboxSelect>>")
 
 
+    def update_party_list(self, trainer_id):
+        self.party_listbox.delete(0, tk.END)
+        for mon in self.project_data.trainers[trainer_id].pokemon:
+            self.party_listbox.insert(tk.END, mon.species)
+
+
     def update_mon_fields(self, mon_id):
         # Set the mon species
         self.species_cb.set(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].species)
         # Set the mon pic
-        try:
-            pic_dir = os.path.join(self.project_path, self.get_mon_pic_path_from_species(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].species))
-            img_path = pic_dir if os.path.exists(pic_dir) else MON_PIC_PLACEHOLDER
-            self.mon_img.config(file=img_path)
-        except Exception:
-            pass
+        self.set_mon_pic(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].species)
         # Set the level
         self.level_sb.delete(0, tk.END)
         self.level_sb.insert(0, self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].level)
@@ -931,6 +931,20 @@ class App(tk.Tk):
                 return pic['path']
 
 
+    def set_mon_pic_trigger(self, event):
+        mon_species = self.species_cb.get()
+        self.set_mon_pic(mon_species)
+
+
+    def set_mon_pic(self, mon_species):
+        try:
+            pic_dir = os.path.join(self.project_path, self.get_mon_pic_path_from_species(mon_species))
+            img_path = pic_dir if os.path.exists(pic_dir) else MON_PIC_PLACEHOLDER
+            self.mon_img.config(file=img_path)
+        except Exception:
+            pass
+
+
     def get_mon_pic_path_from_species(self, species):
         for pic in self.mon_pics:
             if pic['species'] == species:
@@ -938,7 +952,6 @@ class App(tk.Tk):
 
 
     def save_mon_data(self):
-        self.saved_mon = True
         mon = self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
         mon.species = self.species_cb.get()
         mon.level = int(self.level_sb.get())
@@ -954,12 +967,11 @@ class App(tk.Tk):
         else:
             mon.iv = int(self.ivs_spinboxes['HP'].get())
 
+        self.update_party_list(self.current_trainer_id)
+
 
     def save_trainer_data(self):
-        if not self.saved_trainer:
-            self.saved_trainer = True
-        else:
-            self.saved_trainer = False
+        pass
 
 
 if __name__ == "__main__":
