@@ -182,6 +182,7 @@ class App(tk.Tk):
         ttk.Label(col2, text="Trainer Pic:").grid(row=row, column=0, sticky="w", padx=10, pady=5)
         self.trainer_pic_cb = ttk.Combobox(col2, values=[], state="disabled")
         self.trainer_pic_cb.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
+        self.trainer_pic_cb.bind("<<ComboboxSelected>>", self.set_trainer_pic_trigger)
         row += 1
 
         ttk.Label(col2, text="Trainer Class:").grid(row=row, column=0, sticky="w", padx=10, pady=5)
@@ -812,6 +813,17 @@ class App(tk.Tk):
         return party
 
 
+    def update_trainer_fields_trigger(self, event):
+        ''' Update the trainer fields in the UI with the data from self.current_trainer.'''
+        selected_idx = self.listbox_trainers_id.curselection()
+        if selected_idx:
+            self.current_trainer_id = self.get_trainer_from_selected_id(selected_idx[0] + 1) # +1 to skip TRAINER_NONE
+            self.update_trainer_fields(self.current_trainer_id)
+            if self.party_listbox.size() > 0:
+                self.party_listbox.select_set(0, 0)
+                self.party_listbox.event_generate("<<ListboxSelect>>")
+
+
     def update_trainer_fields(self, trainer_id):
         # Insert the ID
         self.id_entry.config(state="normal")
@@ -826,13 +838,7 @@ class App(tk.Tk):
         for i, opt in enumerate(self.gender_options):
             self.radio_gender[i].config(variable=self.current_trainer_gender_var, value=opt)
         # Set the trainer pic
-        self.trainer_pic_cb.set(self.project_data.trainers[trainer_id].trainer_pic)
-        try:
-            pic_dir = os.path.join(self.project_path, self.get_trainer_pic_path_from_id(self.project_data.trainers[trainer_id].trainer_pic))
-            img_path = pic_dir if os.path.exists(pic_dir) else TRAINER_PIC_PLACEHOLDER
-            self.trainer_img.config(file=img_path)
-        except Exception:
-            pass
+        self.set_trainer_pic(self.project_data.trainers[trainer_id].trainer_pic)
         # Set the trainer class
         self.trainer_class_cb.set(self.project_data.trainers[trainer_id].trainer_class)
         # Set the encounter music
@@ -858,22 +864,18 @@ class App(tk.Tk):
 
             var.set(flag_exists)
 
-    
-    def update_trainer_fields_trigger(self, event):
-        ''' Update the trainer fields in the UI with the data from self.current_trainer.'''
-        selected_idx = self.listbox_trainers_id.curselection()
-        if selected_idx:
-            self.current_trainer_id = self.get_trainer_from_selected_id(selected_idx[0] + 1) # +1 to skip TRAINER_NONE
-            self.update_trainer_fields(self.current_trainer_id)
-            if self.party_listbox.size() > 0:
-                self.party_listbox.select_set(0, 0)
-                self.party_listbox.event_generate("<<ListboxSelect>>")
-
 
     def update_party_list(self, trainer_id):
         self.party_listbox.delete(0, tk.END)
         for mon in self.project_data.trainers[trainer_id].pokemon:
             self.party_listbox.insert(tk.END, mon.species)
+
+
+    def update_mon_fields_trigger(self, event):
+        selected_idx = self.party_listbox.curselection()
+        if selected_idx:
+            self.current_trainer_mon = self.get_mon_from_selected_id(selected_idx[0])
+            self.update_mon_fields(self.current_trainer_mon)
 
 
     def update_mon_fields(self, mon_id):
@@ -899,13 +901,6 @@ class App(tk.Tk):
         self.ivs_spinboxes['HP'].insert(0, self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].iv)
 
 
-    def update_mon_fields_trigger(self, event):
-        selected_idx = self.party_listbox.curselection()
-        if selected_idx:
-            self.current_trainer_mon = self.get_mon_from_selected_id(selected_idx[0])
-            self.update_mon_fields(self.current_trainer_mon)
-
-
     def get_trainer_from_selected_id(self, id):
         '''This function does innecessary operations to get the same ID it's provided, just because using the selected index
            will make the program crazy. TkInter uses the same focus for both listboxes, so somehow they collide and gets
@@ -923,6 +918,21 @@ class App(tk.Tk):
         for i in range(6):
             if id == i:
                 return i
+
+
+    def set_trainer_pic_trigger(self, event):
+        trainer_pic_id = self.trainer_pic_cb.get()
+        self.set_trainer_pic(trainer_pic_id)
+
+
+    def set_trainer_pic(self, trainer_pic_id):
+        self.trainer_pic_cb.set(trainer_pic_id)
+        try:
+            pic_dir = os.path.join(self.project_path, self.get_trainer_pic_path_from_id(trainer_pic_id))
+            img_path = pic_dir if os.path.exists(pic_dir) else TRAINER_PIC_PLACEHOLDER
+            self.trainer_img.config(file=img_path)
+        except Exception:
+            pass
 
 
     def get_trainer_pic_path_from_id(self, id):
