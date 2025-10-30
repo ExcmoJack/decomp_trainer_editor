@@ -233,7 +233,7 @@ class App(tk.Tk):
         btns_frame.pack(fill=tk.X, pady=(8, 0))
         self.party_button_up     = ttk.Button(btns_frame, text="Up", state=tk.DISABLED)
         self.party_button_down   = ttk.Button(btns_frame, text="Down", state=tk.DISABLED)
-        self.party_button_add    = ttk.Button(btns_frame, text="Add", state=tk.DISABLED)
+        self.party_button_add    = ttk.Button(btns_frame, text="Add", state=tk.DISABLED, command=self.add_party_mon)
         self.party_button_remove = ttk.Button(btns_frame, text="Remove", state=tk.DISABLED)
 
         self.party_button_up.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
@@ -978,6 +978,13 @@ class App(tk.Tk):
             mon.iv = int(self.ivs_spinboxes['HP'].get())
 
         self.update_party_list(self.current_trainer_id)
+
+
+    def add_party_mon(self):
+        if len(self.project_data.trainers[self.current_trainer_id].pokemon) < 6:
+            new_mon = Pokemon("SPECIES_BULBASAUR")
+            self.project_data.trainers[self.current_trainer_id].pokemon.append(new_mon)
+            self.update_party_list(self.current_trainer_id)
 
 
     def save_trainer_data(self):

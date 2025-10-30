@@ -23,7 +23,7 @@ class Pokemon:
 
         self.level = 5
         self.held_item = "ITEM_NONE"
-        self.moves = []
+        self.moves = ["MOVE_NONE", "MOVE_NONE", "MOVE_NONE", "MOVE_NONE"]
         self.iv = 0
         self.ivs = {"HP": 0, "ATK": 0, "DEF": 0, "SPD": 0, "SPATK": 0, "SPDEF": 0}
         self.evs = {"HP": 0, "ATK": 0, "DEF": 0, "SPD": 0, "SPATK": 0, "SPDEF": 0}
