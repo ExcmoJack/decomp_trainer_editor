@@ -35,8 +35,8 @@ def set_last_opened_project(path):
 PROJECT_FILES = {
     "battle_ai":        "/include/constants/battle_ai.h",
     "items":            "/include/constants/items.h",
-    "mon_pics_dir":     "/src/data/graphics/pokemon.h",
-    "mon_pics_ptr":     "/src/data/pokemon_graphics/still_front_pic_table.h",
+    "mon_pics_dir":     "/src/anim_mon_front_pics.c",
+    "mon_pics_ptr":     "/src/data/pokemon_graphics/front_pic_table.h",
     "moves":            "/include/constants/moves.h",
     "opponents":        "/include/constants/opponents.h",
     "natures":          "/include/constants/pokemon.h",
@@ -678,7 +678,7 @@ class App(tk.Tk):
             full_content = f.readlines()
         
         for line in full_content:
-            if line.strip().startswith('const u32 gMonStillFrontPic_'):
+            if line.strip().startswith('const u32 gMonFrontPic_'):
                 dir_info = line.strip()[10:-3].replace('[]', '').replace('INCBIN_U32("', '').replace('.4bpp.lz', '.png').split(' = ')
                 for pic in self.mon_pics:
                     if pic['pointer'] == dir_info[0]:
@@ -943,7 +943,7 @@ class App(tk.Tk):
         try:
             pic_dir = os.path.join(self.project_path, self.get_mon_pic_path_from_species(mon_species))
             if mon_species in ['SPECIES_CASTFORM']:
-                pic_dir = pic_dir[:-9] + 'normal/front.png'
+                pic_dir = pic_dir[:-14] + 'normal/anim_front.png'
             if os.path.exists(pic_dir):
                 img_path = pic_dir
             else:
