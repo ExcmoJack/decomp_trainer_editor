@@ -749,14 +749,6 @@ class App(tk.Tk):
             elif field == '},':
                 self.project_data.trainers.append(new_trainer)
                 new_trainer = None
-        
-        # for trainer in self.project_data.trainers[265:273]:
-        #     print(trainer.id + ', ' + trainer.trainer_class)
-        #     print('  Party: ' + trainer.party_name)
-        #     ai_desc = [flag for flag in trainer.ai_flags]
-        #     print('  AI flags: ' + str([(flag) for flag in ai_desc]))
-        #     for mon in trainer.pokemon:
-        #         print('  ' + mon.species + ': Lv.' + str(mon.level) + ', ' + mon.held_item + ', ivs: ' + str(mon.iv) + ', ' + mon.moves[0] + ', ' + mon.moves[1] + ', ' + mon.moves[2] + ', ' + mon.moves[3])
 
 
     def get_partymon_data(self, pointer):
@@ -1045,7 +1037,28 @@ class App(tk.Tk):
 
 
     def save_trainer_data(self):
-        pass
+        trainer = self.project_data.trainers[self.current_trainer_id]
+        trainer.name = self.name_entry.get()
+        trainer.trainer_class = self.trainer_class_cb.get()
+        trainer.trainer_pic = self.trainer_pic_cb.get()
+        trainer.encounter_music = self.encounter_music_cb.get()
+        trainer.gender = 'MALE' if self.current_trainer_gender_var == self.gender_options[0] else 'FEMALE'
+        trainer.double_battle = True if self.double_battle_var.get() == True else False
+        
+        trainer_items = []
+        for item in self.item_cbs:
+            trainer_items.append(item.get())
+        trainer.items = trainer_items
+
+        trainer_ai_flags = []
+
+        for flag in self.ai_flag_vars:
+            if flag[1].get() == True:
+                trainer_ai_flags.append(flag[0])
+
+        trainer.ai_flags = trainer_ai_flags
+        # trainer.party_name =
+        trainer.maps = []
 
 
 if __name__ == "__main__":
