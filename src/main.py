@@ -341,12 +341,13 @@ class App(tk.Tk):
         moves_label_frame.grid(row=6, column=0, columnspan=2, sticky="w", pady=(12, 4))
         ttk.Label(moves_label_frame, text="Moves:").pack(side=tk.LEFT)
         self.default_moves_var = tk.BooleanVar(value=False)
-        self.default_moves_check = ttk.Checkbutton(moves_label_frame, text="Default moves", variable=self.default_moves_var, state="disabled")
+        self.default_moves_check = ttk.Checkbutton(moves_label_frame, text="Default moves", variable=self.default_moves_var, state="disabled", command=self.set_default_moves)
         self.default_moves_check.pack(side=tk.LEFT, padx=10)
         self.move_cbs = []
         for i in range(4):
             cb = ttk.Combobox(poke_fields_frame, values=[], state="disabled", width=16)
             cb.grid(row=7 + i, column=0, sticky="ew", pady=2, columnspan=2)
+            cb.bind('<<ComboboxSelected>>', self.uncheck_default_moves)
             self.move_cbs.append(cb)
 
         # IVs
@@ -953,6 +954,22 @@ class App(tk.Tk):
             self.mon_img.config(file=img_path)
         except Exception:
             pass
+
+
+    def set_default_moves(self):
+        if self.default_moves_var.get() == 1:
+            for move in self.move_cbs:
+                move.set("MOVE_NONE")
+    
+
+    def uncheck_default_moves(self, event):
+        is_default = True
+        for move in self.move_cbs:
+            if move.get() != "MOVE_NONE":
+                self.default_moves_var.set(0)
+                is_default = False
+        if is_default:
+            self.default_moves_var.set(1)
 
 
     def get_mon_pic_path_from_species(self, species):
