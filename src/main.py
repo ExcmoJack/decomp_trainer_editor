@@ -950,8 +950,13 @@ class App(tk.Tk):
     def set_mon_pic(self, mon_species):
         try:
             pic_dir = os.path.join(self.project_path, self.get_mon_pic_path_from_species(mon_species))
-            img_path = pic_dir if os.path.exists(pic_dir) else MON_PIC_PLACEHOLDER
-            self.mon_img.config(file=img_path)
+            if mon_species in ['SPECIES_CASTFORM']:
+                pic_dir = pic_dir[:-9] + 'normal/front.png'
+            if os.path.exists(pic_dir):
+                img_path = pic_dir
+            else:
+                img_path = MON_PIC_PLACEHOLDER
+            self.mon_img.config(file=img_path, height=64, width=64)
         except Exception:
             pass
 
