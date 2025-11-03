@@ -231,10 +231,10 @@ class App(tk.Tk):
         # They must be disabled if there is no project opened.
         btns_frame = ttk.Frame(party_frame)
         btns_frame.pack(fill=tk.X, pady=(8, 0))
-        self.party_button_up     = ttk.Button(btns_frame, text="Up", state=tk.DISABLED)
-        self.party_button_down   = ttk.Button(btns_frame, text="Down", state=tk.DISABLED)
+        self.party_button_up     = ttk.Button(btns_frame, text="Up", state=tk.DISABLED, command=self.move_up_party_mon)
+        self.party_button_down   = ttk.Button(btns_frame, text="Down", state=tk.DISABLED, command=self.move_down_party_mon)
         self.party_button_add    = ttk.Button(btns_frame, text="Add", state=tk.DISABLED, command=self.add_party_mon)
-        self.party_button_remove = ttk.Button(btns_frame, text="Remove", state=tk.DISABLED)
+        self.party_button_remove = ttk.Button(btns_frame, text="Remove", state=tk.DISABLED, command=self.del_party_mon)
 
         self.party_button_up.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
         self.party_button_down.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
@@ -279,7 +279,7 @@ class App(tk.Tk):
         tabbed_notebook.add(place_tab, text="Found at...")
         # List of maps where the trainer battle is found.
         # The idea is to scan all /data/maps/scripts.inc to find all ocurrences of the trainer ID. Pending implementation.
-        ttk.Label(place_tab, text="Places where the trainer was found").pack(anchor="w", pady=(10, 5), padx=10)
+        ttk.Label(place_tab, text="Maps where the trainer was found").pack(anchor="w", pady=(10, 5), padx=10)
         self.places_listbox = tk.Listbox(place_tab, height=8)
         self.places_listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
         row += 1
@@ -985,6 +985,41 @@ class App(tk.Tk):
             new_mon = Pokemon("SPECIES_BULBASAUR")
             self.project_data.trainers[self.current_trainer_id].pokemon.append(new_mon)
             self.update_party_list(self.current_trainer_id)
+
+    
+    def del_party_mon(self):
+        if len(self.project_data.trainers[self.current_trainer_id].pokemon) > 1:
+            self.project_data.trainers[self.current_trainer_id].pokemon.remove(self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon])
+            self.update_party_list(self.current_trainer_id)
+            self.party_listbox.selection_set(0, 0)
+            self.party_listbox.event_generate("<<ListboxSelect>>")
+    
+
+    def move_up_party_mon(self):
+        if len(self.project_data.trainers[self.current_trainer_id].pokemon) > 1:
+            if self.current_trainer_mon > 0:
+                mon = self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
+                self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
+                self.project_data.trainers[self.current_trainer_id].pokemon.remove(self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon])
+                self.project_data.trainers[self.current_trainer_id].pokemon.insert(self.current_trainer_mon - 1, mon)
+                self.update_party_list(self.current_trainer_id)
+                self.party_listbox.selection_set(self.current_trainer_mon - 1, self.current_trainer_mon - 1)
+                self.party_listbox.event_generate("<<ListboxSelect>>")
+
+
+    def move_down_party_mon(self):
+        if len(self.project_data.trainers[self.current_trainer_id].pokemon) > 1:
+            if self.current_trainer_mon < 5:
+                mon = self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
+                self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
+                self.project_data.trainers[self.current_trainer_id].pokemon.remove(self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon])
+                self.project_data.trainers[self.current_trainer_id].pokemon.insert(self.current_trainer_mon + 1, mon)
+                self.update_party_list(self.current_trainer_id)
+                if self.current_trainer_mon + 1 < len(self.project_data.trainers[self.current_trainer_id].pokemon):
+                    self.party_listbox.selection_set(self.current_trainer_mon + 1, self.current_trainer_mon + 1)
+                else:
+                    self.party_listbox.selection_set(len(self.project_data.trainers[self.current_trainer_id].pokemon) - 1, len(self.project_data.trainers[self.current_trainer_id].pokemon) - 1)
+                self.party_listbox.event_generate("<<ListboxSelect>>")
 
 
     def save_trainer_data(self):
