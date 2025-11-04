@@ -682,7 +682,17 @@ class App(tk.Tk):
                 dir_info = line.strip()[10:-3].replace('[]', '').replace('INCBIN_U32("', '').replace('.4bpp.lz', '.png').split(' = ')
                 for pic in self.mon_pics:
                     if pic['pointer'] == dir_info[0]:
-                        pic['path'] = dir_info[1]
+                        if pic['species'] in ['SPECIES_CASTFORM']:
+                            pic['path'] = ''
+                            path_list = dir_info[1].split('/')
+                            path_list.insert(-1, 'normal')
+                            for item in path_list:
+                                if item == path_list[0]:
+                                    pic['path'] += item
+                                else:
+                                    pic['path'] += '/' + item
+                        else:
+                            pic['path'] = dir_info[1]
 
 
     def get_trainer_data(self):
@@ -942,8 +952,6 @@ class App(tk.Tk):
     def set_mon_pic(self, mon_species):
         try:
             pic_dir = os.path.join(self.project_path, self.get_mon_pic_path_from_species(mon_species))
-            if mon_species in ['SPECIES_CASTFORM']:
-                pic_dir = pic_dir[:-14] + 'normal/anim_front.png'
             if os.path.exists(pic_dir):
                 img_path = pic_dir
             else:
