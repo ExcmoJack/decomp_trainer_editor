@@ -1,0 +1,66 @@
+{
+    "pokeemerald": 
+        {
+            "battle_ai":        "/include/constants/battle_ai.h",
+            "items":            "/include/constants/items.h",
+            "mon_pics_dir":     "/src/anim_mon_front_pics.c",
+            "mon_pics_ptr":     "/src/data/pokemon_graphics/front_pic_table.h",
+            "moves":            "/include/constants/moves.h",
+            "opponents":        "/include/constants/opponents.h",
+            "natures":          "/include/constants/pokemon.h",
+            "species":          "/include/constants/species.h",
+            "trainer_data":     "/src/data/trainers.h",
+            "trainer_info":     "/include/constants/trainers.h",
+            "trainer_parties":  "/src/data/trainer_parties.h",
+            "trainer_pics_dir": "/src/data/graphics/trainers.h",
+            "trainer_pics_ptr": "/src/data/trainer_graphics/front_pic_tables.h"
+        },
+    "pokeruby":
+        {
+            "battle_ai":        "/include/constants/battle_ai.h",
+            "items":            "/include/constants/items.h",
+            "mon_pics_dir":     "/src/data/graphics/pokemon.h",
+            "mon_pics_ptr":     "/src/data/pokemon_graphics/front_pic_table.h",
+            "moves":            "/include/constants/moves.h",
+            "opponents":        "/include/constants/opponents.h",
+            "natures":          "/include/constants/pokemon.h",
+            "species":          "/include/constants/species.h",
+            "trainer_data":     "/src/data/trainers.h",
+            "trainer_info":     "/include/constants/trainers.h",
+            "trainer_parties":  "/src/data/trainer_parties.h",
+            "trainer_pics_dir": "/src/data/graphics/trainers.h",
+            "trainer_pics_ptr": "/src/data/trainer_graphics/front_pic_tables.h"
+        },
+    "pokefirered":
+        {
+            "battle_ai":        "/include/constants/battle_ai.h",
+            "items":            "/include/constants/items.h",
+            "mon_pics_dir":     "/src/data/graphics/pokemon.h",
+            "mon_pics_ptr":     "/src/data/pokemon_graphics/front_pic_table.h",
+            "moves":            "/include/constants/moves.h",
+            "opponents":        "/include/constants/opponents.h",
+            "natures":          "/include/constants/pokemon.h",
+            "species":          "/include/constants/species.h",
+            "trainer_data":     "/src/data/trainers.h",
+            "trainer_info":     "/include/constants/trainers.h",
+            "trainer_parties":  "/src/data/trainer_parties.h",
+            "trainer_pics_dir": "/src/data/graphics/trainers.h",
+            "trainer_pics_ptr": "/src/data/trainer_graphics/front_pic_tables.h"
+        },
+    "pokeemerald-expansion":
+        {
+            "battle_ai":        "/include/constants/battle_ai.h",
+            "items":            "/include/constants/items.h",
+            "mon_pics_dir":     "/src/anim_mon_front_pics.c",
+            "mon_pics_ptr":     "/src/data/pokemon_graphics/front_pic_table.h",
+            "moves":            "/include/constants/moves.h",
+            "opponents":        "/include/constants/opponents.h",
+            "natures":          "/include/constants/pokemon.h",
+            "species":          "/include/constants/species.h",
+            "trainer_data":     "/src/data/trainers.h",
+            "trainer_info":     "/include/constants/trainers.h",
+            "trainer_parties":  "/src/data/trainer_parties.h",
+            "trainer_pics_dir": "/src/data/graphics/trainers.h",
+            "trainer_pics_ptr": "/src/data/trainer_graphics/front_pic_tables.h"
+        }
+}

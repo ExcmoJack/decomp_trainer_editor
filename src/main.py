@@ -3,8 +3,9 @@
 import tkinter as tk
 import os
 from modules.classes import Trainer, Pokemon, AiFlagList
+from modules.ProjectSelection import ask_project
 from tkinter import ttk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 
 def get_current_directory():
     ''' Get the directory where the script is located '''
@@ -32,25 +33,8 @@ def set_last_opened_project(path):
     with open(config_path, "w") as f:
         json.dump(config, f, indent=4)
 
-PROJECT_FILES = {
-    "battle_ai":        "/include/constants/battle_ai.h",
-    "items":            "/include/constants/items.h",
-    "mon_pics_dir":     "/src/anim_mon_front_pics.c",
-    "mon_pics_ptr":     "/src/data/pokemon_graphics/front_pic_table.h",
-    "moves":            "/include/constants/moves.h",
-    "opponents":        "/include/constants/opponents.h",
-    "natures":          "/include/constants/pokemon.h",
-    "species":          "/include/constants/species.h",
-    "trainer_data":     "/src/data/trainers.h",
-    "trainer_info":     "/include/constants/trainers.h",
-    "trainer_parties":  "/src/data/trainer_parties.h",
-    "trainer_pics_dir": "/src/data/graphics/trainers.h",
-    "trainer_pics_ptr": "/src/data/trainer_graphics/front_pic_tables.h"
-}
-
 TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "trainer_placeholder.png")
 MON_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "pokemon_placeholder.png")
-
 
 class ProjectData():
     def __init__(self):
@@ -64,6 +48,8 @@ class App(tk.Tk):
         self.title("Decomp Trainer Editor")
         self.geometry("1366x768")
         self.project_path = None
+        self.project_type = None
+        self.project_files = {}
         self.project_data = ProjectData()
         self.showdown_type_output = False
         self.current_trainer_id = 1
@@ -391,14 +377,31 @@ class App(tk.Tk):
         ''' Open a folder dialog to select the project path and load its data. WIP.'''
         path = filedialog.askdirectory(title="Select project folder", initialdir=get_last_opened_project())
         if path:
-            set_last_opened_project(path)
-            self.project_path = path
-            self.status.config(text=f"Project opened: {path}")
-            self.check_expansion()
-            self.enable_trainer_editing()
-            self.enable_partymon_editing()
-            self.data_adquisition()
+            self.project_type = ask_project(self)
+            if self.project_type == None:
+                messagebox.showinfo(message="Could not identify the project type. Try opening another folder.", icon='warning')
+            else:
+                try:
+                    self.set_project_paths()
+                    set_last_opened_project(path)
+                    self.project_path = path
+                    self.status.config(text=f"Project opened: {path}")
+                    self.check_expansion()
+                    self.enable_trainer_editing()
+                    self.enable_partymon_editing()
+                    self.data_adquisition()
+                except:
+                    messagebox(message="Could not identify the project type. Try opening another folder.", icon='warning')
     
+
+    def set_project_paths(self):
+        config_path = os.path.join(get_current_directory(), "assets", "project_files.json")
+        if os.path.exists(config_path):
+            import json
+            with open(config_path, "r") as f:
+                config = json.load(f)
+                self.project_files = config.get(self.project_type, "")
+
 
     def enable_trainer_editing(self):
         ''' Enable all UI elements to edit trainer data. '''
@@ -468,6 +471,7 @@ class App(tk.Tk):
 
         self.save_mon_button.config(state=tk.NORMAL)
 
+
     def check_expansion(self):
         ''' Check if the project is based on pokeemerald expansion. WIP. '''
         pass
@@ -498,7 +502,7 @@ class App(tk.Tk):
         ''' Populate the trainer ID listbox from constants/opponents.h file. '''
         trainer_id_list = []
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["opponents"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["opponents"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         for line in full_content:
@@ -518,7 +522,7 @@ class App(tk.Tk):
         trainer_class_id_list = []
         encounter_music_id_list = []
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_info"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["trainer_info"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         for line in full_content:
@@ -541,7 +545,7 @@ class App(tk.Tk):
         ''' Populate the item comboboxes from constants/items.h file.'''
         item_id_list = []
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["items"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["items"].lstrip("/")), "r") as f:
             full_content = f.readlines()
 
         for line in full_content:
@@ -566,7 +570,7 @@ class App(tk.Tk):
 
     def populate_ai_flags(self):
         ''' Populate the AI flags from constants/battle_ai.h file. '''
-        with open(os.path.join(self.project_path, PROJECT_FILES["battle_ai"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["battle_ai"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         ai_flag = None
@@ -592,7 +596,7 @@ class App(tk.Tk):
         ''' Populate the trainer info comboboxes from constants/species.h file. '''
         species_id_list = []
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["species"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["species"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         for line in full_content:
@@ -607,7 +611,7 @@ class App(tk.Tk):
         ''' Populate the trainer info comboboxes from constants/moves.h file. '''
         move_id_list = []
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["moves"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["moves"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         for line in full_content:
@@ -628,7 +632,7 @@ class App(tk.Tk):
         ''' Populate the trainer info comboboxes from constants/pokemon.h file. '''
         natures_id_list = []
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["natures"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["natures"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         for line in full_content:
@@ -641,7 +645,7 @@ class App(tk.Tk):
 
     def get_trainer_pic_list(self):
         self.trainer_pics = []
-        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_pics_ptr"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["trainer_pics_ptr"].lstrip("/")), "r") as f:
             full_content = f.readlines()
     
         for line in full_content:
@@ -651,7 +655,7 @@ class App(tk.Tk):
                 new_pic = {'id': 'TRAINER_PIC_' + entry[0], 'pointer': entry[1], 'path': ''}
                 self.trainer_pics.append(new_pic)
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_pics_dir"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["trainer_pics_dir"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         for line in full_content:
@@ -664,7 +668,7 @@ class App(tk.Tk):
 
     def get_mon_pic_list(self):
         self.mon_pics = []
-        with open(os.path.join(self.project_path, PROJECT_FILES["mon_pics_ptr"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["mon_pics_ptr"].lstrip("/")), "r") as f:
             full_content = f.readlines()
     
         for line in full_content:
@@ -674,7 +678,7 @@ class App(tk.Tk):
                 new_pic = {'species': 'SPECIES_' + entry[0], 'pointer': entry[1], 'path': ''}
                 self.mon_pics.append(new_pic)
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["mon_pics_dir"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["mon_pics_dir"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         for line in full_content:
@@ -698,7 +702,7 @@ class App(tk.Tk):
     def get_trainer_data(self):
         ''' Get the trainer info from data/trainers.h file and process it to self.project_data. '''
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_data"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["trainer_data"].lstrip("/")), "r") as f:
             full_content = f.readlines()
         
         # .partyFlags - It will be adquired from party macros
@@ -764,7 +768,7 @@ class App(tk.Tk):
     def get_partymon_data(self, pointer):
         ''' Get the party Pokémon data from data/trainer_parties.h file and process it to return as a Pokémon list. '''
 
-        with open(os.path.join(self.project_path, PROJECT_FILES["trainer_parties"].lstrip("/")), "r") as f:
+        with open(os.path.join(self.project_path, self.project_files["trainer_parties"].lstrip("/")), "r") as f:
             full_content = f.readlines()
 
         party = []
