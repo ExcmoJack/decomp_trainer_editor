@@ -45,6 +45,9 @@ class ProjectData():
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.init_window_data()    
+
+    def init_window_data(self):
         self.title("Decomp Trainer Editor")
         self.geometry("1366x768")
         self.project_path = None
@@ -54,7 +57,14 @@ class App(tk.Tk):
         self.showdown_type_output = False
         self.current_trainer_id = 1
         self.current_trainer_mon = 0
+        self.resizable(False, False)
 
+        self.create_menubar()
+        self.create_window_layout()
+        self.create_status_bar()
+
+
+    def create_menubar(self):
         ############
         # MENU BAR #
         ############
@@ -88,10 +98,12 @@ class App(tk.Tk):
         self.menubar.add_cascade(label="Help", menu=help_menu)
         self.config(menu=self.menubar)
 
+
+    def create_window_layout(self):
         # The main windows layout is divided in 3 columns. One will permit to select the trainer to edit,
         # the second will show trainer general info and the third will show the selected Pokémon info from the party.
-        main_frame = tk.Frame(self)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        self.main_frame = tk.Frame(self)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
 
         ##############################
         # COLUMN 1 - Trainer ID List #
@@ -99,7 +111,7 @@ class App(tk.Tk):
 
         # Trainer list container. It will have a fixed width and scrollbars as the ID don't use to be too long.
         col1_kwargs = {"width": 340,"bd": 2, "relief": tk.GROOVE}
-        col1 = tk.Frame(main_frame, **col1_kwargs)
+        col1 = tk.Frame(self.main_frame, **col1_kwargs)
         col1.pack(side=tk.LEFT, fill=tk.Y)
         col1.pack_propagate(False)
         # Trainer list container set up.
@@ -125,7 +137,7 @@ class App(tk.Tk):
 
         # Trainer info container. Info is supposed to be updated when selecting a trainer from the listbox. Maybe lacks of a save button?
         col2_kwargs = {"bd": 2, "relief": tk.GROOVE}
-        col2 = tk.Frame(main_frame, **col2_kwargs)
+        col2 = tk.Frame(self.main_frame, **col2_kwargs)
         col2.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.gender_options = ["MALE", "FEMALE"]
@@ -277,7 +289,7 @@ class App(tk.Tk):
         # COLUMN 3 - Pokemon configuration #
         ####################################
         col3_kwargs = {"bd": 2, "relief": tk.GROOVE}
-        col3 = tk.Frame(main_frame, **col3_kwargs)
+        col3 = tk.Frame(self.main_frame, **col3_kwargs)
         col3.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Data container for all Pokémon fields. Comboboxes to be populated at project load. Individual Pokémon data
@@ -368,6 +380,8 @@ class App(tk.Tk):
 
         poke_fields_frame.columnconfigure(1, weight=1)
 
+
+    def create_status_bar(self):
         # Status bar at the bottom of the window to show messages to the user.
         self.status = tk.Label(self, text="Project not opened.", bd=1, relief=tk.SUNKEN, anchor=tk.W)
         self.status.pack(side=tk.BOTTOM, fill=tk.X)
@@ -377,6 +391,10 @@ class App(tk.Tk):
         ''' Open a folder dialog to select the project path and load its data. WIP.'''
         path = filedialog.askdirectory(title="Select project folder", initialdir=get_last_opened_project())
         if path:
+            self.menubar.destroy()
+            self.main_frame.destroy()
+            self.status.destroy()
+            self.init_window_data()
             self.project_type = ask_project(self)
             if self.project_type == None:
                 messagebox.showinfo(message="Could not identify the project type. Try opening another folder.", icon='warning')
