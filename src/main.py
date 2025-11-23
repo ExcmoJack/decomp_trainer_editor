@@ -4,6 +4,7 @@ import tkinter as tk
 import os
 from modules.classes import Trainer, Pokemon, AiFlagList
 from modules.ProjectSelection import ask_project
+from modules.SaveTrainerData import *
 from tkinter import ttk
 from tkinter import filedialog, messagebox
 
@@ -73,11 +74,11 @@ class App(tk.Tk):
         self.menubar = tk.Menu(self)
 
         # File menu: It allows to open/save projects and exit the app.
-        file_menu = tk.Menu(self.menubar, tearoff=0)
-        file_menu_open = file_menu.add_command(label="Open project", command=self.open_project)
-        file_menu_save = file_menu.add_command(label="Save project")
-        file_menu.add_separator()
-        file_menu_exit = file_menu.add_command(label="Exit", command=self.quit)
+        self.file_menu = tk.Menu(self.menubar, tearoff=0)
+        file_menu_open = self.file_menu.add_command(label="Open project", command=self.open_project)
+        file_menu_save = self.file_menu.add_command(label="Save project", command=self.save_project, state=tk.DISABLED)
+        self.file_menu.add_separator()
+        file_menu_exit = self.file_menu.add_command(label="Exit", command=self.quit)
 
         # Edit menu: It allows to copy/paste trainer settings or just Pokémon data. It will be disabled by default until a project is opened.
         edit_menu = tk.Menu(self.menubar, tearoff=0)
@@ -93,7 +94,7 @@ class App(tk.Tk):
         help_menu.add_command(label="About")
 
         # Adding all menus to the menubar and configuring the root window to use it
-        self.menubar.add_cascade(label="File", menu=file_menu)
+        self.menubar.add_cascade(label="File", menu=self.file_menu)
         self.menubar.add_cascade(label="Edit", menu=edit_menu, state=tk.DISABLED)
         self.menubar.add_cascade(label="Help", menu=help_menu)
         self.config(menu=self.menubar)
@@ -410,6 +411,12 @@ class App(tk.Tk):
                     self.data_adquisition()
                 except:
                     messagebox(message="Could not identify the project type. Try opening another folder.", icon='warning')
+
+
+    def save_project(self):
+        save_obj = TrainerDataFile(self.project_data.trainers, self.project_type)
+        save_obj.init_file()
+        save_obj.create_files(os.path.join(get_current_directory(), "assets"))
     
 
     def set_project_paths(self):
@@ -437,6 +444,7 @@ class App(tk.Tk):
             self.save_trainer_button
         ]
 
+        self.file_menu.entryconfig(1, state=tk.NORMAL)
         self.menubar.entryconfig("Edit", state="normal")
         self.name_entry.config(state="normal")
         self.double_battle_check.config(state="normal")
@@ -753,7 +761,7 @@ class App(tk.Tk):
             elif field == '.trainerPic':
                 new_trainer.trainer_pic = data[2].strip('",')
             elif field == '.trainerName':
-                new_trainer.name = data[2].strip('",_()')
+                new_trainer.name = line.split('"')[1]
             elif field == '.items':
                 for item in data[2:]:
                     if item.strip('",{}') != '':
