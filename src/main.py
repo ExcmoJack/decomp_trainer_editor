@@ -5,6 +5,7 @@ import os
 from modules.classes import Trainer, Pokemon, AiFlagList
 from modules.ProjectSelection import ask_project
 from modules.SaveTrainerData import *
+from modules.ParseRepoData import *
 from tkinter import ttk
 from tkinter import filedialog, messagebox
 
@@ -47,6 +48,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.init_window_data()    
+
 
     def init_window_data(self):
         self.title("Decomp Trainer Editor")
@@ -398,7 +400,9 @@ class App(tk.Tk):
             self.init_window_data()
             self.project_type = ask_project(self)
             if self.project_type == None:
-                messagebox.showinfo(message="Could not identify the project type. Try opening another folder.", icon='warning')
+                messagebox.showinfo(message='Could not identify the project type. Try opening another folder.', icon='warning')
+            if self.project_type == 'pokeemerald-expansion':
+                messagebox.showinfo(message='pokeemerald-expansion is not supported in this release. Sorry for the inconvenience.', icon='info')
             else:
                 try:
                     self.set_project_paths()
@@ -408,9 +412,13 @@ class App(tk.Tk):
                     self.check_expansion()
                     self.enable_trainer_editing()
                     self.enable_partymon_editing()
+                    if self.project_type != 'pokeemerald-expansion':
+                        self.parse_repo_data = ParseRepoDataVanilla(self.project_path, self.project_files, self.project_type)
+                    else:
+                        self.parse_repo_data = ParseRepoDataExpansion(self.project_path, self.project_files, self.project_type)
                     self.data_adquisition()
-                except:
-                    messagebox(message="Could not identify the project type. Try opening another folder.", icon='warning')
+                except Exception:
+                    messagebox(message="Could not identify the project type. Try opening another folder or selecting another type of project.", icon='error')
 
 
     def save_project(self):
@@ -512,13 +520,11 @@ class App(tk.Tk):
         self.populate_ai_flags()
         self.populate_species_list()
         self.populate_moves_list()
-        self.get_trainer_pic_list()
-        self.get_mon_pic_list()
         # Only if the project is based on pokeemerald expansion
         if self.project_data.expansion:
             self.populate_nature_list()
         
-        self.get_trainer_data()
+        self.get_trainer_data_from_files()
         if self.listbox_trainers_id.size() > 0:
             self.listbox_trainers_id.select_set(0, 0)
             self.listbox_trainers_id.event_generate("<<ListboxSelect>>")
@@ -526,17 +532,7 @@ class App(tk.Tk):
 
     def populate_trainer_list(self):
         ''' Populate the trainer ID listbox from constants/opponents.h file. '''
-        trainer_id_list = []
-
-        with open(os.path.join(self.project_path, self.project_files["opponents"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-        
-        for line in full_content:
-            if line.startswith("#define TRAINER_"):
-                trainer_name = line.split()[1]
-                trainer_id_list.append(trainer_name)
-
-        trainer_id_list = trainer_id_list[1:] # Remove TRAINER_NONE
+        trainer_id_list = self.parse_repo_data.parse_opponents_file()
 
         for trainer_name in trainer_id_list:
             self.listbox_trainers_id.insert(tk.END, trainer_name)
@@ -544,45 +540,16 @@ class App(tk.Tk):
 
     def populate_trainer_info(self):
         ''' Populate the trainer info comboboxes from constants/trainers.h file. '''
-        trainer_pic_id_list = []
-        trainer_class_id_list = []
-        encounter_music_id_list = []
-
-        with open(os.path.join(self.project_path, self.project_files["trainer_info"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
+        trainer_info = self.parse_repo_data.parse_trainer_info_file()
         
-        for line in full_content:
-            if line.startswith("#define TRAINER_PIC_"):
-                trainer_pic_id = line.split()[1]
-                trainer_pic_id_list.append(trainer_pic_id)
-            elif line.startswith("#define TRAINER_CLASS_"):
-                trainer_class_id = line.split()[1]
-                trainer_class_id_list.append(trainer_class_id)
-            elif line.startswith("#define TRAINER_ENCOUNTER_MUSIC_"):
-                trainer_encounter_music_id = line.split()[1]
-                encounter_music_id_list.append(trainer_encounter_music_id)
-        
-        self.trainer_pic_cb['values'] = trainer_pic_id_list
-        self.trainer_class_cb['values'] = trainer_class_id_list
-        self.encounter_music_cb['values'] = encounter_music_id_list
+        self.trainer_pic_cb['values'] = trainer_info['TRAINER_PIC']
+        self.trainer_class_cb['values'] = trainer_info['TRAINER_CLASS']
+        self.encounter_music_cb['values'] = trainer_info['TRAINER_ENCOUNTER_MUSIC']
 
 
     def populate_item_list(self):
         ''' Populate the item comboboxes from constants/items.h file.'''
-        item_id_list = []
-
-        with open(os.path.join(self.project_path, self.project_files["items"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-
-        for line in full_content:
-            if line.startswith("#define ITEM_"):
-                item_id = line.split()[1]
-                item_id_list.append(item_id)
-            
-        for line in full_content:
-            if line.startswith("#define ITEMS_COUNT"):
-                item_count = int(line.split()[2])
-                item_id_list = item_id_list[:item_count]
+        item_id_list = self.parse_repo_data.parse_items_file()
         
         for cb in self.item_cbs:
             cb['values'] = item_id_list
@@ -596,16 +563,10 @@ class App(tk.Tk):
 
     def populate_ai_flags(self):
         ''' Populate the AI flags from constants/battle_ai.h file. '''
-        with open(os.path.join(self.project_path, self.project_files["battle_ai"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-        
-        ai_flag = None
+        ai_flag_id_list = self.parse_repo_data.parse_battle_ai_file()
 
-        for line in full_content:
-            if line.startswith("#define AI_SCRIPT_"):
-                ai_flag = line.split()[1]
-                self.project_data.ai_flags.add_flag(ai_flag)
-                ai_flag = None
+        for flag in ai_flag_id_list:
+            self.project_data.ai_flags.add_flag(flag)
         
         for i, flag in enumerate(self.project_data.ai_flags.flags):
             var = tk.BooleanVar()
@@ -620,35 +581,14 @@ class App(tk.Tk):
 
     def populate_species_list(self):
         ''' Populate the trainer info comboboxes from constants/species.h file. '''
-        species_id_list = []
-
-        with open(os.path.join(self.project_path, self.project_files["species"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
+        species_id_list = self.parse_repo_data.parse_species_file()
         
-        for line in full_content:
-            if line.startswith("#define SPECIES_"):
-                species_id = line.split()[1]
-                species_id_list.append(species_id)
-        
-        self.species_cb['values'] = species_id_list[1:] # Remove SPECIES_NONE
+        self.species_cb['values'] = species_id_list
     
 
     def populate_moves_list(self):
         ''' Populate the trainer info comboboxes from constants/moves.h file. '''
-        move_id_list = []
-
-        with open(os.path.join(self.project_path, self.project_files["moves"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-        
-        for line in full_content:
-            if line.startswith("#define MOVE_"):
-                move_id = line.split()[1]
-                move_id_list.append(move_id)
-        
-        for line in full_content:
-            if line.startswith("#define MOVES_COUNT"):
-                moves_count = int(line.split()[2])
-                move_id_list = move_id_list[:moves_count]
+        move_id_list = self.parse_repo_data.parse_moves_file()
         
         for cb in self.move_cbs:
             cb['values'] = move_id_list
@@ -669,181 +609,11 @@ class App(tk.Tk):
         self.nature_cb['values'] = natures_id_list
 
 
-    def get_trainer_pic_list(self):
-        self.trainer_pics = []
-        with open(os.path.join(self.project_path, self.project_files["trainer_pics_ptr"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-    
-        for line in full_content:
-            if line.strip().startswith('TRAINER_SPRITE'):
-                data = line.strip()[15:-2]
-                entry = data.split(', ')
-                new_pic = {'id': 'TRAINER_PIC_' + entry[0], 'pointer': entry[1], 'path': ''}
-                self.trainer_pics.append(new_pic)
-
-        with open(os.path.join(self.project_path, self.project_files["trainer_pics_dir"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-        
-        for line in full_content:
-            if line.strip().startswith('const u32 gTrainerFrontPic_'):
-                dir_info = line.strip()[10:-3].replace('[]', '').replace('INCBIN_U32("', '').replace('.4bpp.lz', '.png').split(' = ')
-                for pic in self.trainer_pics:
-                    if pic['pointer'] == dir_info[0]:
-                        pic['path'] = dir_info[1]
-    
-
-    def get_mon_pic_list(self):
-        self.mon_pics = []
-        with open(os.path.join(self.project_path, self.project_files["mon_pics_ptr"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-    
-        for line in full_content:
-            if line.strip().startswith('SPECIES_SPRITE('):
-                data = line.strip()[15:-2].replace(' ', '')
-                entry = data.split(',')
-                new_pic = {'species': 'SPECIES_' + entry[0], 'pointer': entry[1], 'path': ''}
-                self.mon_pics.append(new_pic)
-
-        with open(os.path.join(self.project_path, self.project_files["mon_pics_dir"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-        
-        for line in full_content:
-            if line.strip().startswith('const u32 gMonFrontPic_'):
-                dir_info = line.strip()[10:-3].replace('[]', '').replace('INCBIN_U32("', '').replace('.4bpp.lz', '.png').split(' = ')
-                for pic in self.mon_pics:
-                    if pic['pointer'] == dir_info[0]:
-                        if pic['species'] in ['SPECIES_CASTFORM']:
-                            pic['path'] = ''
-                            path_list = dir_info[1].split('/')
-                            path_list.insert(-1, 'normal')
-                            for item in path_list:
-                                if item == path_list[0]:
-                                    pic['path'] += item
-                                else:
-                                    pic['path'] += '/' + item
-                        else:
-                            pic['path'] = dir_info[1]
-
-
-    def get_trainer_data(self):
-        ''' Get the trainer info from data/trainers.h file and process it to self.project_data. '''
-
-        with open(os.path.join(self.project_path, self.project_files["trainer_data"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-        
-        # .partyFlags - It will be adquired from party macros
-        # .trainerClass
-        # .encounterMusic_gender
-        # .trainerPic
-        # .trainerName
-        # .items
-        # .doubleBattle
-        # .aiFlags
-        # .partySize - It will be adquired from party macros
-        # .party
-
-        new_trainer = None
-        for line in full_content:
-            data = line.strip().split(" ")
-            field = data[0]
-            if field[:9] == '[TRAINER_':
-                new_trainer = Trainer(line.strip().split(" ")[0][1:-1])
-                uses_party_macro = True
-            elif field == '.trainerClass':
-                new_trainer.trainer_class = data[2].strip('",')
-            elif field == '.encounterMusic_gender':
-                new_trainer.gender = self.gender_options[0]
-                for stuff in data[2:]:
-                    if stuff.startswith("TRAINER_ENCOUNTER_MUSIC_"):
-                        new_trainer.encounter_music = stuff.strip('",')
-                    elif stuff == "F_TRAINER_FEMALE":
-                        new_trainer.gender = self.gender_options[1]
-            elif field == '.trainerPic':
-                new_trainer.trainer_pic = data[2].strip('",')
-            elif field == '.trainerName':
-                new_trainer.name = line.split('"')[1]
-            elif field == '.items':
-                for item in data[2:]:
-                    if item.strip('",{}') != '':
-                        new_trainer.items.append(item.strip('",{}'))
-                while len(new_trainer.items) < 4:
-                    new_trainer.items.append('ITEM_NONE')
-            elif field == '.doubleBattle':
-                if data[2] == 'TRUE,':
-                    new_trainer.double_battle = True
-                else:
-                    new_trainer.double_battle = False
-            elif field == '.aiFlags':
-                for flag in data[2:]:
-                    if self.project_data.ai_flags.is_flag(flag.strip('",{}')):
-                        new_trainer.ai_flags.append(flag.strip('",'))
-            elif field == '.partyFlags':
-                uses_party_macro = False
-            elif field == '.partySize':
-                uses_party_macro = False
-            elif field == '.party':
-                if uses_party_macro:
-                    party_pointer = data[2].split('(')[1].strip('),')
-                    new_trainer.party_name = party_pointer
-                    new_trainer.pokemon = self.get_partymon_data(party_pointer)
-            elif field == '},':
-                self.project_data.trainers.append(new_trainer)
-                new_trainer = None
-
-
-    def get_partymon_data(self, pointer):
-        ''' Get the party Pokémon data from data/trainer_parties.h file and process it to return as a Pokémon list. '''
-
-        with open(os.path.join(self.project_path, self.project_files["trainer_parties"].lstrip("/")), "r") as f:
-            full_content = f.readlines()
-
-        party = []
-        new_mon = None
-        
-        party_pointer_found = False
-        for line in full_content:
-            data = line.strip().split(" ")
-            field = data[0]
-            if line.strip().startswith('static const struct') and (pointer + '[]') in line.split(" "):
-                party_pointer_found = True
-            if party_pointer_found:
-                if field == '}' or field == '},':
-                    new_mon = Pokemon(mon_struct['species'])
-                    new_mon.level = int(mon_struct['lvl'])
-                    new_mon.held_item = mon_struct['heldItem']
-                    new_mon.iv = int(mon_struct['iv'])
-                    new_mon.moves = mon_struct['moves']
-                    party.append(new_mon)
-                    new_mon = None
-                    mon_struct = None
-                if field == '{':
-                    mon_struct = {
-                        'iv': '', # Somehow up to 255
-                        'lvl': '',
-                        'species': '',
-                        'heldItem': 'ITEM_NONE',
-                        'moves': ['MOVE_NONE', 'MOVE_NONE', 'MOVE_NONE', 'MOVE_NONE']
-                    }
-                if field == '.iv':
-                    mon_struct['iv'] = int(data[2].strip(','))
-                if field == '.lvl':
-                    mon_struct['lvl'] = int(data[2].strip(','))
-                if field == '.species':
-                    mon_struct['species'] = data[2].strip('",')
-                if field == '.heldItem':
-                    mon_struct['heldItem'] = data[2].strip('",')
-                if field == '.moves':
-                    moves = []
-                    for move in data[2:]:
-                        if move.strip('",{}') != '':
-                            moves.append(move.strip('",{}'))
-                    while len(moves) < 4:
-                        moves.append('MOVE_NONE')
-                    mon_struct['moves'] = moves
-                if line.strip().startswith('};'):
-                    party_pointer_found = False
-    
-        return party
+    def get_trainer_data_from_files(self):
+        ''' Get the trainer info from project_files file and process it to self.project_data. '''
+        self.trainer_pics = self.parse_repo_data.parse_trainer_pic_files()
+        self.mon_pics = self.parse_repo_data.parse_mon_pic_files()
+        self.project_data.trainers = self.parse_repo_data.parse_trainer_data_file(self.project_data.ai_flags, self.gender_options)
 
 
     def update_trainer_fields_trigger(self, event):
