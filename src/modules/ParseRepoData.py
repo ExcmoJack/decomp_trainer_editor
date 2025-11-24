@@ -11,7 +11,7 @@ class ParseRepoDataVanilla():
 
 
     def parse_opponents_file(self):
-        ''' Read and store in a list the trainer IDs from constants/opponents.h file. '''
+        ''' Read and store in a list the trainer IDs from 'opponents' file. '''
         trainer_id_list = []
 
         with open(os.path.join(self.project_path, self.project_files['opponents'].lstrip('/')), 'r') as f:
@@ -26,7 +26,7 @@ class ParseRepoDataVanilla():
     
 
     def parse_trainer_info_file(self):
-        ''' Read and store in a dict list the trainer info from constants/trainers.h file. '''
+        ''' Read and store in a dict list the trainer info from 'trainer_info' file. '''
         trainer_pic_id_list = []
         trainer_class_id_list = []
         trainer_encounter_music_id_list = []
@@ -53,7 +53,7 @@ class ParseRepoDataVanilla():
     
 
     def parse_items_file(self):
-        ''' Read and store in a list the item IDs from constants/items.h file.'''
+        ''' Read and store in a list the item IDs from 'items' file.'''
         item_id_list = []
 
         with open(os.path.join(self.project_path, self.project_files["items"].lstrip("/")), "r") as f:
@@ -73,7 +73,7 @@ class ParseRepoDataVanilla():
     
 
     def parse_battle_ai_file(self):
-        ''' Read and store in a list the AI flags from constants/battle_ai.h file. '''
+        ''' Read and store in a list the AI flags from 'battle_ai' file. '''
         ai_flag_id_list = []
 
         with open(os.path.join(self.project_path, self.project_files["battle_ai"].lstrip("/")), "r") as f:
@@ -87,7 +87,7 @@ class ParseRepoDataVanilla():
     
 
     def parse_species_file(self):
-        ''' Read and store in a list the species IDs from constants/species.h file. 
+        ''' Read and store in a list the species IDs from 'species' file. 
             Avoids SPECIES_EGG and old UNOWN slots.'''
         species_id_list = []
 
@@ -105,7 +105,7 @@ class ParseRepoDataVanilla():
     
 
     def parse_moves_file(self):
-        ''' Read and store in a list the moves IDs from constants/moves.h file. Limited to MOVES_COUNT. '''
+        ''' Read and store in a list the moves IDs from 'moves' file. Limited to MOVES_COUNT. '''
         move_id_list = []
 
         with open(os.path.join(self.project_path, self.project_files["moves"].lstrip("/")), "r") as f:
@@ -255,7 +255,7 @@ class ParseRepoDataVanilla():
 
 
     def parse_trainer_data_file(self, ai_flags, gender_options):
-        ''' Parse the trainer info from data/trainers.h file and process it to self.project_data. 
+        ''' Parse the trainer info from 'trainer_data' file and process it to self.project_data. 
         
             * .partyFlags - It will be adquired from party macros
             * .trainerClass
@@ -329,7 +329,7 @@ class ParseRepoDataVanilla():
 
 
     def _parse_trainer_parties_file(self, pointer):
-        ''' Parse the party Pokémon data from data/trainer_parties.h file and process it to return as a Pokémon list. '''
+        ''' Parse the party Pokémon data from 'trainer_parties' file and process it to return as a Pokémon list. '''
 
         with open(os.path.join(self.project_path, self.project_files["trainer_parties"].lstrip("/")), "r") as f:
             full_content = f.readlines()
