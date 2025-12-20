@@ -11,13 +11,18 @@ PROJECT_TYPES = [
 ]
 
 class ProjectSelectionDialog:
-    '''Dialog modal para seleccionar el tipo de proyecto.
+    '''
+    Modal dialog to select the project type.
 
-    Se puede invocar desde otro módulo usando la función `ask_project(parent)` que
-    devuelve el string seleccionado o None si el usuario cancela.
+    It can be invoked from another module using the `ask_project(parent)` function,
+    which returns the selected string or None if the user cancels.
     '''
 
     def __init__(self, parent=None):
+        '''
+        Initializes the ProjectSelectionDialog with the given parent window.
+        Creates the dialog window and its widgets.
+        '''
         self.parent = parent
         self.owns_parent = False
 
@@ -55,16 +60,27 @@ class ProjectSelectionDialog:
         self.window.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def on_continue(self):
+        '''
+        Handles the Continue button click event.
+        Sets the result to the selected project type and closes the dialog.
+        '''
         self.result = self.project_combobox.get()
         self.window.destroy()
 
     def on_close(self):
+        '''
+        Handles the Cancel button click event or window close event.
+        Sets the result to None and closes the dialog.
+        '''
         self.result = None
         self.window.destroy()
 
 
 def ask_project(parent=None):
-    '''Show project type modal dialog.'''
+    '''
+    Show project type modal dialog.
+    Returns the selected project type string or None if cancelled.
+    '''
     dialog = ProjectSelectionDialog(parent)
     dialog.window.wait_window()
     result = dialog.result

@@ -1,7 +1,13 @@
 #! /usr/bin/env python3
 
 class Trainer:
+    '''
+    Represents a Pokémon trainer with their properties, party, items, and AI flags.
+    '''
     def __init__(self, id):
+        '''
+        Initializes a Trainer with the given ID and default attributes.
+        '''
         self.id = id
 
         self.name = "TRAINER"
@@ -18,7 +24,13 @@ class Trainer:
 
 
 class Pokemon:
+    '''
+    Represents a Pokémon with its species, stats, moves, and other attributes.
+    '''
     def __init__(self, species):
+        '''
+        Initializes a Pokémon with the given species and default stats and attributes.
+        '''
         self.species = species
 
         self.level = 5
@@ -31,16 +43,32 @@ class Pokemon:
         self.ability = "ABILITY_NONE"
 
 class AiFlagList:
+    '''
+    Stores a list of AI flags for trainers.
+    '''
     def __init__(self):
+        '''
+        Initializes an empty list of AI flags.
+        '''
         self.flags = []
     
     def add_flag(self, flag):
+        '''
+        Adds a flag to the list of AI flags.
+        '''
         self.flags.append(flag)
     
     def clear_flags(self):
+        '''
+        Removes all flags from the list.
+        '''
         self.flags = []
     
     def is_flag(self, checkflag):
+        '''
+        Checks if the given flag is present in the list.
+        Returns True if found, False otherwise.
+        '''
         for flag in self.flags:
             if checkflag == flag:
                 return True

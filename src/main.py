@@ -39,18 +39,32 @@ TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "train
 MON_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "pokemon_placeholder.png")
 
 class ProjectData():
+    '''
+    Stores project-wide data such as trainers, expansion flag, and AI flags.
+    '''
     def __init__(self):
+        '''
+        Initializes the ProjectData with empty trainers list, expansion flag set to False, and a new AiFlagList.
+        '''
         self.trainers = []
         self.expansion = False
         self.ai_flags = AiFlagList()
 
 class App(tk.Tk):
     def __init__(self):
+        '''
+        Initializes the main application and sets up the main window.
+        Calls init_window_data to prepare the data and graphical interface.
+        '''
         super().__init__()
         self.init_window_data()    
 
 
     def init_window_data(self):
+        '''
+        Initializes window-related data and prepares the main interface components.
+        This method sets up variables, widgets, and any necessary state for the main window.
+        '''
         self.title("Decomp Trainer Editor")
         self.geometry("1366x768")
         self.project_path = None
@@ -68,6 +82,10 @@ class App(tk.Tk):
 
 
     def create_menubar(self):
+        '''
+        Creates and configures the application's menu bar.
+        This method sets up the main menu options and attaches them to the window.
+        '''
         ############
         # MENU BAR #
         ############
@@ -103,6 +121,12 @@ class App(tk.Tk):
 
 
     def create_window_layout(self):
+        '''
+        Creates and arranges the main window layout.
+
+        Sets up the three main columns: trainer selection, trainer info, and Pokémon info.
+        Initializes all widgets and containers for user interaction.
+        '''
         # The main windows layout is divided in 3 columns. One will permit to select the trainer to edit,
         # the second will show trainer general info and the third will show the selected Pokémon info from the party.
         self.main_frame = tk.Frame(self)
@@ -388,6 +412,11 @@ class App(tk.Tk):
 
 
     def create_status_bar(self):
+        '''
+        Creates and displays the status bar at the bottom of the main window.
+
+        The status bar is used to show messages and feedback to the user.
+        '''
         # Status bar at the bottom of the window to show messages to the user.
         self.status = tk.Label(self, text="Project not opened.", bd=1, relief=tk.SUNKEN, anchor=tk.W)
         self.status.pack(side=tk.BOTTOM, fill=tk.X)
@@ -632,6 +661,12 @@ class App(tk.Tk):
 
 
     def update_trainer_fields(self, trainer_id):
+        '''
+        Updates the trainer fields in the UI with the data from the selected trainer.
+
+        Sets all relevant widgets (ID, name, gender, picture, class, encounter music, double battle, party, items, and AI flags)
+        to reflect the current state of the trainer with the given ID.
+        '''
         # Insert the ID
         self.text_entry_trainer_id.config(state="normal")
         self.text_entry_trainer_id.delete(0, tk.END)
@@ -673,12 +708,22 @@ class App(tk.Tk):
 
 
     def update_party_list(self, trainer_id):
+        '''
+        Updates the party listbox with the Pokémon species of the selected trainer.
+
+        Clears the current list and inserts each Pokémon species from the trainer's party.
+        '''
         self.listbox_mons_in_party.delete(0, tk.END)
         for mon in self.project_data.trainers[trainer_id].pokemon:
             self.listbox_mons_in_party.insert(tk.END, mon.species)
 
 
     def update_mon_fields_trigger(self, event):
+        '''
+        Updates the UI fields with the data of the selected Pokémon in the trainer's party.
+
+        Sets species, picture, level, held item, moves, and IVs for the selected Pokémon.
+        '''
         selected_idx = self.listbox_mons_in_party.curselection()
         if selected_idx:
             self.current_trainer_mon = self.get_mon_from_selected_id(selected_idx[0])
@@ -686,6 +731,11 @@ class App(tk.Tk):
 
 
     def update_mon_fields(self, mon_id):
+        '''
+        Updates the UI fields with the data of the selected Pokémon in the trainer's party.
+
+        Sets species, picture, level, held item, moves, and IVs for the selected Pokémon.
+        '''
         # Set the mon species
         self.combobox_mon_species.set(self.project_data.trainers[self.current_trainer_id].pokemon[mon_id].species)
         # Set the mon pic
@@ -709,9 +759,11 @@ class App(tk.Tk):
 
 
     def get_trainer_from_selected_id(self, id):
-        '''This function does innecessary operations to get the same ID it's provided, just because using the selected index
-           will make the program crazy. TkInter uses the same focus for both listboxes, so somehow they collide and gets
-           changed in runtime. We better use this functions to get a constant integer as ID.'''
+        '''
+        This function does innecessary operations to get the same ID it's provided, just because using the selected index
+        will make the program crazy. TkInter uses the same focus for both listboxes, so somehow they collide and gets
+        changed in runtime. We better use this functions to get a constant integer as ID.
+        '''
         index = 0
         trainer_id = self.project_data.trainers[id].id
         for trainer in self.project_data.trainers:
@@ -722,17 +774,30 @@ class App(tk.Tk):
     
 
     def get_mon_from_selected_id(self, id):
+        '''
+        Returns the index of the Pokémon in the party corresponding to the given ID.
+
+        Used to map the selected index from the party listbox to the actual Pokémon index.
+        '''
         for i in range(6):
             if id == i:
                 return i
 
 
     def set_trainer_pic_trigger(self, event):
+        '''
+        Handles the event when a new trainer picture is selected from the combobox.
+
+        Updates the trainer picture displayed in the UI.
+        '''
         trainer_pic_id = self.combobox_trainer_pic.get()
         self.set_trainer_pic(trainer_pic_id)
 
 
     def set_trainer_pic(self, trainer_pic_id):
+        '''
+        Updates the trainer picture displayed in the UI.
+        '''
         self.combobox_trainer_pic.set(trainer_pic_id)
         try:
             pic_dir = os.path.join(self.project_path, self.get_trainer_pic_path_from_id(trainer_pic_id))
@@ -743,17 +808,32 @@ class App(tk.Tk):
 
 
     def get_trainer_pic_path_from_id(self, id):
+        '''
+        Returns the file path for the trainer picture corresponding to the given trainer picture ID.
+
+        Searches the loaded trainer pictures for a matching ID and returns its path.
+        '''
         for pic in self.trainer_pics:
             if pic['id'] == id:
                 return pic['path']
 
 
     def set_mon_pic_trigger(self, event):
+        '''
+        Handles the event when a new Pokémon species is selected from the combobox.
+
+        Updates the Pokémon picture displayed in the UI.
+        '''
         mon_species = self.combobox_mon_species.get()
         self.set_mon_pic(mon_species)
 
 
     def set_mon_pic(self, mon_species):
+        '''
+        Updates the Pokémon picture displayed in the UI.
+
+        Sets the Pokémon picture based on the given species. If the image is not found, uses a placeholder.
+        '''
         try:
             pic_dir = os.path.join(self.project_path, self.get_mon_pic_path_from_species(mon_species))
             if os.path.exists(pic_dir):
@@ -766,12 +846,22 @@ class App(tk.Tk):
 
 
     def set_default_moves(self):
+        '''
+        Sets all move comboboxes to "MOVE_NONE" if the default moves checkbox is selected.
+
+        This method is used to quickly reset the moves of the selected Pokémon to their default state.
+        '''
         if self.bool_mon_default_moves.get() == 1:
             for move in self.combobox_mon_movements:
                 move.set("MOVE_NONE")
     
 
     def uncheck_default_moves(self, event):
+        '''
+        Unchecks the "Default moves" checkbox if any move combobox is set to a value other than "MOVE_NONE".
+
+        If all move comboboxes are set to "MOVE_NONE", the checkbox is checked.
+        '''
         is_default = True
         for move in self.combobox_mon_movements:
             if move.get() != "MOVE_NONE":
@@ -782,12 +872,23 @@ class App(tk.Tk):
 
 
     def get_mon_pic_path_from_species(self, species):
+        '''
+        Returns the file path for the Pokémon picture corresponding to the given species.
+
+        Searches the loaded Pokémon pictures for a matching species and returns its path.
+        '''
         for pic in self.mon_pics:
             if pic['species'] == species:
                 return pic['path']
 
 
     def save_mon_object(self):
+        '''
+        Saves the current Pokémon's data from the UI fields to the trainer's party.
+
+        Updates species, level, held item, moves, and IVs for the selected Pokémon.
+        Handles expansion-specific fields if applicable.
+        '''
         mon = self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
         mon.species = self.combobox_mon_species.get()
         mon.level = int(self.spinbox_mon_level.get())
@@ -807,6 +908,11 @@ class App(tk.Tk):
 
 
     def add_party_mon(self):
+        '''
+        Adds a new Pokémon to the current trainer's party if there are fewer than six.
+
+        The new Pokémon is initialized as a Bulbasaur by default and the party list is updated.
+        '''
         if len(self.project_data.trainers[self.current_trainer_id].pokemon) < 6:
             new_mon = Pokemon("SPECIES_BULBASAUR")
             self.project_data.trainers[self.current_trainer_id].pokemon.append(new_mon)
@@ -814,6 +920,11 @@ class App(tk.Tk):
 
     
     def del_party_mon(self):
+        '''
+        Removes the currently selected Pokémon from the trainer's party if more than one remains.
+
+        Updates the party list and selects the first Pokémon in the list after removal.
+        '''
         if len(self.project_data.trainers[self.current_trainer_id].pokemon) > 1:
             self.project_data.trainers[self.current_trainer_id].pokemon.remove(self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon])
             self.update_party_list(self.current_trainer_id)
@@ -822,6 +933,11 @@ class App(tk.Tk):
     
 
     def move_up_party_mon(self):
+        '''
+        Moves the currently selected Pokémon one position up in the trainer's party list.
+
+        Updates the party list and selection accordingly.
+        '''
         if len(self.project_data.trainers[self.current_trainer_id].pokemon) > 1:
             if self.current_trainer_mon > 0:
                 mon = self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
@@ -834,6 +950,11 @@ class App(tk.Tk):
 
 
     def move_down_party_mon(self):
+        '''
+        Moves the currently selected Pokémon one position down in the trainer's party list.
+
+        Updates the party list and selection accordingly.
+        '''
         if len(self.project_data.trainers[self.current_trainer_id].pokemon) > 1:
             if self.current_trainer_mon < 5:
                 mon = self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
@@ -849,6 +970,11 @@ class App(tk.Tk):
 
 
     def save_trainer_object(self):
+        '''
+        Saves the current trainer's data from the UI fields to the trainer object.
+
+        Updates name, class, picture, encounter music, gender, double battle flag, items, and AI flags.
+        '''
         trainer = self.project_data.trainers[self.current_trainer_id]
         trainer.name = self.text_entry_trainer_name.get()
         trainer.trainer_class = self.combobox_trainer_class.get()
@@ -874,6 +1000,11 @@ class App(tk.Tk):
 
 
     def find_trainer_in_maps(self):
+        '''
+        Searches for the current trainer's ID in map script files and updates the UI with the locations found.
+
+        Populates the listbox with all maps where the trainer battle is referenced.
+        '''
         trainer = self.project_data.trainers[self.current_trainer_id]
         maps_found = self.parse_repo_data.parse_data_inc_files_for_trainerbattle(trainer.id)
         self.listbox_trainer_map_appereances.delete(0, tk.END)

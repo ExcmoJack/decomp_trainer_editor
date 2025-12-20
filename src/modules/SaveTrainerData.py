@@ -60,7 +60,13 @@ CUSTOM_ITEMS = 0b10
 
 
 class TrainerDataFile():
+    '''
+    Handles the creation and backup of trainer and party data files for different Pokémon project types.
+    '''
     def __init__(self, trainers, project_type):
+        '''
+        Initializes the TrainerDataFile with a list of trainers and the project type.
+        '''
         self.trainers_h = ''
         self.trainer_parties_h = ''
         self.project_type = project_type
@@ -68,10 +74,17 @@ class TrainerDataFile():
 
 
     def init_file(self):
+        '''
+        Initializes the trainers_h string with the initial file content for the selected project type.
+        '''
         self.trainers_h = INITIAL_FILE_CONTENT[self.project_type]
 
 
     def create_files(self, output_paths):
+        '''
+        Creates and writes the trainer and party data files, making backups if needed.
+        Returns 0 on success, 1 if output paths do not exist.
+        '''
         PROJECT = 0
         TRAINER_DATA = 1
         TRAINER_PARTIES = 2
@@ -105,6 +118,10 @@ class TrainerDataFile():
 
 
     def get_trainer_party_type(self, trainer):
+        '''
+        Determines the party type for a trainer based on held items and custom moves.
+        Returns a string representing the party type.
+        '''
         party_type_byte = 0
         party_type = 'NO_ITEM_DEFAULT_MOVES'
 
@@ -135,6 +152,9 @@ class TrainerDataFile():
 
 
     def write_trainer(self, trainer, party_type='NO_ITEM_DEFAULT_MOVES'):
+        '''
+        Generates the trainer data string for the trainers.h file.
+        '''
         # Trainers.h
         if trainer.items != ['ITEM_NONE', 'ITEM_NONE', 'ITEM_NONE', 'ITEM_NONE']:
             item_list = '{' + str(trainer.items).replace("'", "")[1:-1] + '}'
@@ -171,6 +191,9 @@ class TrainerDataFile():
 
 
     def write_parties(self, trainer, party_type='NO_ITEM_DEFAULT_MOVES'):
+        '''
+        Generates the party data string for the trainer_parties.h file based on the party type.
+        '''
         party_struct_name = 'TrainerMonNoItemDefaultMoves'
         if party_type == 'NO_ITEM_CUSTOM_MOVES':
             party_struct_name = 'TrainerMonNoItemCustomMoves'
@@ -208,6 +231,9 @@ class TrainerDataFile():
         
 
     def create_backup(self, file_path):
+        '''
+        Creates a timestamped backup of the specified file in the same directory.
+        '''
         timestamp = datetime.datetime.now()
         new_file_content = ""
 
@@ -221,7 +247,13 @@ class TrainerDataFile():
             new_file.write(new_file_content)
 
 class ShowdownDataFile():
+    '''
+    Placeholder for handling Showdown data file creation.
+    '''
     def __init__(self, trainers, project_type):
+        '''
+        Not implemented.
+        '''
         pass
 
 if __name__ == "__main__":

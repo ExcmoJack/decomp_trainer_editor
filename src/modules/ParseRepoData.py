@@ -384,6 +384,10 @@ class ParseRepoDataVanilla():
 
 
     def parse_data_inc_files_for_trainerbattle(self, trainer_id):
+        '''
+        Parse all the .inc files in scripts/ and maps/ folders to find the trainerbattle references for the given trainer_id.
+        Returns a list of map names or script file names where the trainerbattle is found.
+        '''
         maps_root_folder = os.path.join(self.project_path + self.project_files['scripts_folder'], 'maps')
         scripts_root_folder = os.path.join(self.project_path + self.project_files['scripts_folder'], 'scripts')
         trainerbattle_folders = []
