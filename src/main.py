@@ -284,6 +284,8 @@ class App(tk.Tk):
         ttk.Label(tab_trainer_places, text="Maps where the trainer was found").pack(anchor="w", pady=(10, 5), padx=10)
         self.listbox_trainer_map_appereances = tk.Listbox(tab_trainer_places, height=8)
         self.listbox_trainer_map_appereances.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        self.button_find_trainer_in_maps = ttk.Button(tab_trainer_places, text="Find trainer", state=tk.DISABLED, command=self.find_trainer_in_maps)
+        self.button_find_trainer_in_maps.pack(side=tk.BOTTOM, pady=(0, 10))
         row += 1
 
         self.button_save_trainer = ttk.Button(column2, text="Save Trainer", state=tk.DISABLED, command=self.save_trainer_object)
@@ -446,7 +448,8 @@ class App(tk.Tk):
             self.button_party_mon_down,
             self.button_party_add_mon,
             self.button_party_remove_mon,
-            self.button_save_trainer
+            self.button_save_trainer,
+            self.button_find_trainer_in_maps
         ]
 
         self.file_menu.entryconfig(1, state=tk.NORMAL)
@@ -868,6 +871,14 @@ class App(tk.Tk):
         trainer.ai_flags = trainer_ai_flags
         # trainer.party_name =
         trainer.maps = []
+
+
+    def find_trainer_in_maps(self):
+        trainer = self.project_data.trainers[self.current_trainer_id]
+        maps_found = self.parse_repo_data.parse_data_inc_files_for_trainerbattle(trainer.id)
+        self.listbox_trainer_map_appereances.delete(0, tk.END)
+        for map in maps_found:
+            self.listbox_trainer_map_appereances.insert(tk.END, map)
 
 
 if __name__ == "__main__":

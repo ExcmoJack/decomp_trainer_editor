@@ -383,6 +383,42 @@ class ParseRepoDataVanilla():
         return party
 
 
+    def parse_data_inc_files_for_trainerbattle(self, trainer_id):
+        maps_root_folder = os.path.join(self.project_path + self.project_files['scripts_folder'], 'maps')
+        scripts_root_folder = os.path.join(self.project_path + self.project_files['scripts_folder'], 'scripts')
+        trainerbattle_folders = []
+
+        for map_name in os.listdir(maps_root_folder):
+            map_folder_path = os.path.join(maps_root_folder, map_name)
+            map_scripts_path = os.path.join(map_folder_path, 'scripts.inc')
+            if os.path.isfile(map_scripts_path):
+                with open(map_scripts_path, 'rt') as f:
+                    script_file = f.readlines()
+                
+                for line in script_file:
+                    if line.strip().startswith('trainerbattle'):
+                        if (trainer_id + ',') in line:
+                            if map_name not in trainerbattle_folders:
+                                trainerbattle_folders.append(map_name)
+        
+        for file in os.listdir(scripts_root_folder):
+            special_scripts_path = os.path.join(scripts_root_folder, file)
+            if os.path.isfile(special_scripts_path):
+                with open(special_scripts_path, 'rt') as f:
+                    script_file = f.readlines()
+                
+                for line in script_file:
+                    if line.strip().startswith('trainerbattle'):
+                        if (trainer_id + ',') in line:
+                            if ('File: ' + file) not in trainerbattle_folders:
+                                trainerbattle_folders.append('File: ' + file)
+
+        if len(trainerbattle_folders) == 0:
+            trainerbattle_folders.append('Probably rematch or in src. Check manually.')
+
+        return trainerbattle_folders
+        
+
 class ParseRepoDataExpansion():
     ''' This class defines all the functions needed to get all the data needed from the project_files for each version
         only for pokeemerald-expansion projects. '''
