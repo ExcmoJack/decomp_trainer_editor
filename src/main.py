@@ -110,8 +110,8 @@ class App(tk.Tk):
 
         # Help menu: It allows to access documentation and see info about the app.
         help_menu = tk.Menu(self.menubar, tearoff=0)
-        help_menu.add_command(label="Documentation")
-        help_menu.add_command(label="About")
+        help_menu.add_command(label="Documentation", command=self.launch_documentation)
+        help_menu.add_command(label="About", command=self.show_about_dialog)
 
         # Adding all menus to the menubar and configuring the root window to use it
         self.menubar.add_cascade(label="File", menu=self.file_menu)
@@ -1011,6 +1011,19 @@ class App(tk.Tk):
         for map in maps_found:
             self.listbox_trainer_map_appereances.insert(tk.END, map)
 
+    def show_about_dialog(self):
+        '''
+        Displays the "About" dialog with information about the application.
+        '''
+        messagebox.showinfo(title="About Decomp Trainer Editor", message="Decomp Trainer Editor\n\nA simple GUI application to edit trainer data in decompiled Pokémon GBA games.\n\nDeveloped by Excmojack.\n\n2025 © All rights reserved.\n\nVersion 0.1.0: Released 20th December 2025")
+
+
+    def launch_documentation(self):
+        '''
+        Opens the default web browser to the application's documentation page.
+        '''
+        import webbrowser
+        webbrowser.open_new_tab("https://github.com/ExcmoJack/decomp_trainer_editor/blob/main/README.md")
 
 if __name__ == "__main__":
     app = App()
