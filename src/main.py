@@ -286,7 +286,7 @@ class App(tk.Tk):
         self.listbox_trainer_map_appereances.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
         row += 1
 
-        self.button_save_trainer = ttk.Button(column2, text="Save Trainer", state=tk.DISABLED, command=self.save_trainer_data)
+        self.button_save_trainer = ttk.Button(column2, text="Save Trainer", state=tk.DISABLED, command=self.save_trainer_object)
         self.button_save_trainer.grid(row=row, column=0, columnspan=2, sticky="ew", padx=10, pady=(10, 5))
 
         ####################################
@@ -379,7 +379,7 @@ class App(tk.Tk):
             spinbox.grid(row=row, column=col*2+1, sticky="w", pady=2)
             self.dict_spinboxes_evs[stat] = spinbox
 
-        self.button_save_mon = ttk.Button(frame_selected_mon_data, text="Save Pokémon", state=tk.DISABLED, command=self.save_mon_data)
+        self.button_save_mon = ttk.Button(frame_selected_mon_data, text="Save Pokémon", state=tk.DISABLED, command=self.save_mon_object)
         self.button_save_mon.grid(row=33, column=0, columnspan=4, pady=6)
 
         frame_selected_mon_data.columnconfigure(1, weight=1)
@@ -421,7 +421,7 @@ class App(tk.Tk):
     def save_project(self):
         save_obj = TrainerDataFile(self.project_data.trainers, self.project_type)
         save_obj.init_file()
-        save_obj.create_files(os.path.join(get_current_directory(), "assets"))
+        save_obj.create_files((self.project_path, self.project_files['trainer_data'], self.project_files['trainer_parties']))
     
 
     def set_project_paths(self):
@@ -784,7 +784,7 @@ class App(tk.Tk):
                 return pic['path']
 
 
-    def save_mon_data(self):
+    def save_mon_object(self):
         mon = self.project_data.trainers[self.current_trainer_id].pokemon[self.current_trainer_mon]
         mon.species = self.combobox_mon_species.get()
         mon.level = int(self.spinbox_mon_level.get())
@@ -845,7 +845,7 @@ class App(tk.Tk):
                 self.listbox_mons_in_party.event_generate("<<ListboxSelect>>")
 
 
-    def save_trainer_data(self):
+    def save_trainer_object(self):
         trainer = self.project_data.trainers[self.current_trainer_id]
         trainer.name = self.text_entry_trainer_name.get()
         trainer.trainer_class = self.combobox_trainer_class.get()

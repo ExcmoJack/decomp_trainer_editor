@@ -1,5 +1,5 @@
-from modules.classes import Trainer, Pokemon
 import os
+import datetime
 
 INITIAL_FILE_CONTENT = \
 {
@@ -71,7 +71,20 @@ class TrainerDataFile():
         self.trainers_h = INITIAL_FILE_CONTENT[self.project_type]
 
 
-    def create_files(self, output_path):
+    def create_files(self, output_paths):
+        PROJECT = 0
+        TRAINER_DATA = 1
+        TRAINER_PARTIES = 2
+
+        trainers_h_path = os.path.join(output_paths[PROJECT] + output_paths[TRAINER_DATA])
+        trainer_parties_h_path = os.path.join(output_paths[PROJECT] + output_paths[TRAINER_PARTIES])
+
+        if not (os.path.exists(trainers_h_path) and os.path.exists(trainer_parties_h_path)):
+            return 1
+
+        self.create_backup(trainers_h_path)
+        self.create_backup(trainer_parties_h_path)
+
         for trainer in self.data:
             party_type = self.get_trainer_party_type(trainer)
             self.trainers_h += self.write_trainer(trainer, party_type)
@@ -82,11 +95,13 @@ class TrainerDataFile():
 
         self.trainer_parties_h = self.trainer_parties_h[:-1]
 
-        with open (os.path.join(output_path, 'trainers.h'), 'wt') as trainers_h:
-            trainers_h.write(self.trainers_h)
+        with open (trainers_h_path, 'wt') as trainers_h_file:
+            trainers_h_file.write(self.trainers_h)
         
-        with open (os.path.join(output_path, 'trainer_parties.h'), 'wt') as trainer_parties_h:
-            trainer_parties_h.write(self.trainer_parties_h)
+        with open (trainer_parties_h_path, 'wt') as trainer_parties_h_file:
+            trainer_parties_h_file.write(self.trainer_parties_h)
+        
+        return 0
 
 
     def get_trainer_party_type(self, trainer):
@@ -192,7 +207,22 @@ class TrainerDataFile():
         return party_data
         
 
+    def create_backup(self, file_path):
+        timestamp = datetime.datetime.now()
+        new_file_content = ""
+
+        with open (file_path, 'rt') as file:
+            new_file_content = file.read()
+        
+        new_file_path_split = file_path.split('.')
+        new_file_path = os.path.join(new_file_path_split[0] + '_' + str(timestamp.year) + str(timestamp.month) + str(timestamp.day) + '_' + str(timestamp.hour) + str(timestamp.minute) + str(timestamp.second) + '.' + new_file_path_split[1])
+        
+        with open (new_file_path, 'xt') as new_file:
+            new_file.write(new_file_content)
+
+class ShowdownDataFile():
+    def __init__(self, trainers, project_type):
+        pass
+
 if __name__ == "__main__":
-    file = TrainerDataFile(None, 'pokefirered')
-    file.init_file()
-    print(file.trainers_h)
+    print("[!] Please launch main.py")
