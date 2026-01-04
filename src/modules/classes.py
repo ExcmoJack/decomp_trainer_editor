@@ -21,6 +21,8 @@ class Trainer:
         self.pokemon = []
         self.party_name = ""
         self.maps = []
+        self.difficulty_level = DifficultyLevel()
+        self.party_size = 0 # This will be unused in vanilla projects
 
 
 class Pokemon:
@@ -41,6 +43,7 @@ class Pokemon:
         self.evs = {"HP": 0, "ATK": 0, "DEF": 0, "SPD": 0, "SPATK": 0, "SPDEF": 0}
         self.nature = "NATURE_HARDY"
         self.ability = "ABILITY_NONE"
+        self.gender = "TRAINER_MON_RANDOM_GENDER"
 
 class AiFlagList:
     '''
@@ -73,3 +76,12 @@ class AiFlagList:
             if checkflag == flag:
                 return True
         return False
+    
+
+class DifficultyLevel:
+    def __init__(self, current_level="DIFFICULTY_NORMAL"):
+        self.levels = ["DIFFICULTY_EASY", "DIFFICULTY_NORMAL", "DIFFICULTY_HARD"]
+        self.current_level = current_level
+    
+    def get_level_length(self):
+        return len(self.current_level)

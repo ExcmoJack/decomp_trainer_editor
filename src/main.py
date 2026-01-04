@@ -433,8 +433,6 @@ class App(tk.Tk):
             self.project_type = ask_project(self)
             if self.project_type == None:
                 messagebox.showinfo(message='Could not identify the project type. Try opening another folder.', icon='warning')
-            if self.project_type == 'pokeemerald-expansion':
-                messagebox.showinfo(message='pokeemerald-expansion is not supported in this release. Sorry for the inconvenience.', icon='info')
             else:
                 try:
                     self.set_project_paths()
@@ -536,8 +534,10 @@ class App(tk.Tk):
 
 
     def check_expansion(self):
-        ''' Check if the project is based on pokeemerald expansion. WIP. '''
-        pass
+        if self.project_type == 'pokeemerald-expansion':
+            return True
+        else:
+            return False
 
 
     def data_adquisition(self):
@@ -835,9 +835,10 @@ class App(tk.Tk):
         Sets the Pokémon picture based on the given species. If the image is not found, uses a placeholder.
         '''
         try:
-            pic_dir = os.path.join(self.project_path, self.get_mon_pic_path_from_species(mon_species))
-            if os.path.exists(pic_dir):
-                img_path = pic_dir
+            pic_dir = self.get_mon_pic_path_from_species(mon_species)
+            if pic_dir != None and pic_dir != '':
+                full_pic_dir = os.path.join(self.project_path, pic_dir)
+                img_path = full_pic_dir
             else:
                 img_path = MON_PIC_PLACEHOLDER
             self.photoimage_mon_pic.config(file=img_path, height=64, width=64)
