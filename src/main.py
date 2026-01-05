@@ -37,6 +37,8 @@ def set_last_opened_project(path):
 
 TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "trainer_placeholder.png")
 MON_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "pokemon_placeholder.png")
+STAR_ICON = os.path.join(get_current_directory(), "assets", "star.png")
+DYNAMAX_ICON = os.path.join(get_current_directory(), "assets", "dynamax.png")
 
 class ProjectData():
     '''
@@ -326,15 +328,33 @@ class App(tk.Tk):
         # to be loaded when selecting a Pokémon from the party listbox.
         frame_selected_mon_data = ttk.Frame(column3)
         frame_selected_mon_data.pack(pady=10, padx=20, fill=tk.X)
-
+        
         # Show mon picture at the top. If the image can't be loaded, show a blank canvas instead.
+        # Create a two-column table (frame) for mon picture and toggle buttons
+        frame_mon_pic_and_toggles = ttk.Frame(frame_selected_mon_data)
+        frame_mon_pic_and_toggles.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 4))
+
+        # First column: Pokémon picture
         try:
             self.photoimage_mon_pic = tk.PhotoImage(file=MON_PIC_PLACEHOLDER)
-            label_mon_pic = ttk.Label(frame_selected_mon_data, image=self.photoimage_mon_pic)
-            label_mon_pic.grid(row=0, column=0, columnspan=2)
+            label_mon_pic = ttk.Label(frame_mon_pic_and_toggles, image=self.photoimage_mon_pic)
+            label_mon_pic.grid(row=0, column=0, rowspan=2, padx=(0, 10))
         except Exception:
-            canvas_mon_pic_when_files_missing = tk.Canvas(frame_selected_mon_data, width=64, height=64, bg="#cccccc", highlightthickness=0)
-            canvas_mon_pic_when_files_missing.grid(row=0, column=0, columnspan=2)
+            canvas_mon_pic_when_files_missing = tk.Canvas(frame_mon_pic_and_toggles, width=64, height=64, bg="#cccccc", highlightthickness=0)
+            canvas_mon_pic_when_files_missing.grid(row=0, column=0, rowspan=2, padx=(0, 10))
+
+        # Second column: Two rows, each with a toggle button
+        self.current_mon_is_shiny  = tk.BooleanVar(value=False)
+        self.current_mon_dinamaxes = tk.BooleanVar(value=False)
+        
+        self.photoimage_star_icon = tk.PhotoImage(file=STAR_ICON)
+        self.button_shiny_toggle = ttk.Button(frame_mon_pic_and_toggles, text='Shiny', image=self.photoimage_star_icon, state="disabled")
+        self.button_shiny_toggle.grid(row=0, column=1, sticky="w", pady=2)
+
+        self.photoimage_dynamax_icon = tk.PhotoImage(file=DYNAMAX_ICON)
+        self.button_toggle_dynamax = ttk.Button(frame_mon_pic_and_toggles, text="Dynamax", image=self.photoimage_dynamax_icon, state="disabled")
+        self.button_toggle_dynamax.grid(row=1, column=1, sticky="w", pady=2)
+        
 
         # Species
         ttk.Label(frame_selected_mon_data, text="Species:").grid(row=1, column=0, sticky="w", pady=4)
@@ -406,7 +426,7 @@ class App(tk.Tk):
             self.dict_spinboxes_evs[stat] = spinbox
 
         self.button_save_mon = ttk.Button(frame_selected_mon_data, text="Save Pokémon", state=tk.DISABLED, command=self.save_mon_object)
-        self.button_save_mon.grid(row=33, column=0, columnspan=4, pady=6)
+        self.button_save_mon.grid(row=33, column=0, columnspan=4)
 
         frame_selected_mon_data.columnconfigure(1, weight=1)
 
@@ -439,7 +459,7 @@ class App(tk.Tk):
                     set_last_opened_project(path)
                     self.project_path = path
                     self.status.config(text=f"Project opened: {path}")
-                    self.check_expansion()
+                    self.project_data.expansion = self.check_expansion()
                     self.enable_trainer_editing()
                     self.enable_partymon_editing()
                     self.data_adquisition()
@@ -510,12 +530,15 @@ class App(tk.Tk):
         if self.project_data.expansion:
             partymon_ui_comboboxes.append(self.combobox_mon_nature)
             partymon_ui_comboboxes.append(self.combobox_mon_ability)
-            partymon_ui_spinners += self.dict_spinboxes_ivs["ATK"]
-            partymon_ui_spinners += self.dict_spinboxes_ivs["DEF"]
-            partymon_ui_spinners += self.dict_spinboxes_ivs["SPD"]
-            partymon_ui_spinners += self.dict_spinboxes_ivs["SPATK"]
-            partymon_ui_spinners += self.dict_spinboxes_ivs["SPDEF"]
-            partymon_ui_spinners += self.dict_spinboxes_evs
+            partymon_ui_spinners.append(self.dict_spinboxes_ivs["ATK"])
+            partymon_ui_spinners.append(self.dict_spinboxes_ivs["DEF"])
+            partymon_ui_spinners.append(self.dict_spinboxes_ivs["SPD"])
+            partymon_ui_spinners.append(self.dict_spinboxes_ivs["SPATK"])
+            partymon_ui_spinners.append(self.dict_spinboxes_ivs["SPDEF"])
+            for stat in self.dict_spinboxes_evs:
+                partymon_ui_spinners.append(self.dict_spinboxes_evs[stat])
+            self.button_shiny_toggle.config(state="normal")
+            self.button_toggle_dynamax.config(state="normal")
         else:
             ivs_frame = self.dict_spinboxes_ivs["HP"].master
             for widget in ivs_frame.winfo_children():
@@ -529,6 +552,7 @@ class App(tk.Tk):
 
         for spinner in partymon_ui_spinners:
             spinner.config(state="normal")
+
 
         self.button_save_mon.config(state=tk.NORMAL)
 
@@ -897,7 +921,7 @@ class App(tk.Tk):
         for move_index in range(0,4):
             mon.moves[move_index] = self.combobox_mon_movements[move_index].get()
 
-        if self.check_expansion():
+        if self.project_data.expansion:
             mon.ivs = None
             mon.evs = None
             mon.nature = None
