@@ -446,7 +446,7 @@ class ParseRepoDataExpansion():
                 trainer_name = line.split()[1]
                 trainer_id_list.append(trainer_name)
 
-        return trainer_id_list[1:] # Remove TRAINER_NONE
+        return trainer_id_list[1:-1] # Remove TRAINER_NONE and TRAINER_PARTNER
     
 
     def parse_trainer_info_file(self):
@@ -868,66 +868,54 @@ class ParseRepoDataExpansion():
         STAT_SPD = 5
 
         party = []
-        new_mon = None
+        new_mon = Pokemon('SPECIES_NONE')
+
+        reading_moves = False
         
         for line in fragment:
             data = line.strip().split(" ")
-            field = data[0]
-            if field == '}' or field == '},':
-                new_mon = Pokemon(mon_struct['species'])
-                new_mon.level = int(mon_struct['lvl'])
-                new_mon.held_item = mon_struct['heldItem']
-                new_mon.iv = int(mon_struct['iv'])
-                new_mon.ivs['HP']    = mon_struct['ivs'][STAT_HP]
-                new_mon.ivs['ATK']   = mon_struct['ivs'][STAT_ATK]
-                new_mon.ivs['DEF']   = mon_struct['ivs'][STAT_DEF]
-                new_mon.ivs['SPD']   = mon_struct['ivs'][STAT_SPE]
-                new_mon.ivs['SPATK'] = mon_struct['ivs'][STAT_SPA]
-                new_mon.ivs['SPDEF'] = mon_struct['ivs'][STAT_SPD]
-                new_mon.moves = mon_struct['moves']
-                party.append(new_mon)
-                new_mon = None
-            if field == '{':
-                mon_struct = {
-                    'iv': 0, # Somehow up to 255
-                    'ivs': [0, 0, 0, 0, 0, 0], # Extracts a list from a macro
-                    'evs': [0, 0, 0, 0, 0, 0], # Extracts a list from a macro
-                    'lvl': '',
-                    'species': '',
-                    'heldItem': 'ITEM_NONE',
-                    'moves': ['MOVE_NONE', 'MOVE_NONE', 'MOVE_NONE', 'MOVE_NONE'],
-                    'gender': 'TRAINER_MON_RANDOM_GENDER',
-                    'nature': 'NATURE_HARDY',
-                    'dynamaxLevel': 10,
-                    'gigantamax': True,
-                    'dynamaxUse': True,
-                    'shiny': False
-                }
-            if field == '.iv':
-                if (data[2].strip(',')).isdecimal():
-                    mon_struct['iv'] = int(data[2].strip(','))
-                elif data[2].strip(',').startswith('TRAINER_PARTY_IVS'):
-                    iv_values = ''.join(data[2:]).replace('TRAINER_PARTY_IVS(', '').replace(')', '').split(',')
-                    mon_struct['ivs'][STAT_HP]  = int(iv_values[STAT_HP])
-                    mon_struct['ivs'][STAT_ATK] = int(iv_values[STAT_ATK])
-                    mon_struct['ivs'][STAT_DEF] = int(iv_values[STAT_DEF])
-                    mon_struct['ivs'][STAT_SPE] = int(iv_values[STAT_SPE])
-                    mon_struct['ivs'][STAT_SPA] = int(iv_values[STAT_SPA])
-                    mon_struct['ivs'][STAT_SPD] = int(iv_values[STAT_SPD])
-            if field == '.lvl':
-                mon_struct['lvl'] = int(data[2].strip(','))
-            if field == '.species':
-                mon_struct['species'] = data[2].strip('",')
-            if field == '.heldItem':
-                mon_struct['heldItem'] = data[2].strip('",')
-            if field == '.moves':
-                moves = []
-                for move in data[2:]:
-                    if move.strip('",{}') != '':
-                        moves.append(move.strip('",{}'))
-                while len(moves) < 4:
-                    moves.append('MOVE_NONE')
-                mon_struct['moves'] = moves
+            if reading_moves:
+                if data[0].startswith('MOVE_'):
+                    moves.append(data[0].strip('",{}'))
+                elif data[0] == '},':
+                    reading_moves = False
+                    while len(moves) < 4:
+                        moves.append('MOVE_NONE')
+                    new_mon.moves = moves
+            else:
+                field = data[0]
+                if (field == '}' or field == '},') and not reading_moves:
+
+                    party.append(new_mon)
+                    new_mon = Pokemon('SPECIES_NONE')
+                if field == '.iv':
+                    if (data[2].strip(',')).isdecimal():
+                        new_mon.iv = int(data[2].strip(','))
+                    elif data[2].strip(',').startswith('TRAINER_PARTY_IVS'):
+                        iv_values = ''.join(data[2:]).replace('TRAINER_PARTY_IVS(', '').replace(')', '').split(',')
+                        new_mon.ivs[STAT_HP]  = int(iv_values[STAT_HP])
+                        new_mon.ivs[STAT_ATK] = int(iv_values[STAT_ATK])
+                        new_mon.ivs[STAT_DEF] = int(iv_values[STAT_DEF])
+                        new_mon.ivs[STAT_SPE] = int(iv_values[STAT_SPE])
+                        new_mon.ivs[STAT_SPA] = int(iv_values[STAT_SPA])
+                        new_mon.ivs[STAT_SPD] = int(iv_values[STAT_SPD])
+                if field == '.lvl':
+                    new_mon.level = int(data[2].strip(','))
+                if field == '.species':
+                    new_mon.species = data[2].strip('",')
+                if field == '.heldItem':
+                    new_mon.held_item = data[2].strip('",')
+                if field == '.moves':
+                    moves = []
+                    for move in data[2:]:
+                        if move.strip('",{}') != '':
+                            moves.append(move.strip('",{}'))
+                    if moves == []:
+                        reading_moves = True
+                    else:                            
+                        while len(moves) < 4:
+                            moves.append('MOVE_NONE')
+                        new_mon.moves = moves
     
         return party
 
