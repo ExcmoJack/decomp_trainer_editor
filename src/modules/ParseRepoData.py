@@ -899,6 +899,15 @@ class ParseRepoDataExpansion():
                         new_mon.ivs[STAT_SPE] = int(iv_values[STAT_SPE])
                         new_mon.ivs[STAT_SPA] = int(iv_values[STAT_SPA])
                         new_mon.ivs[STAT_SPD] = int(iv_values[STAT_SPD])
+                if field == '.ev':
+                    if data[2].strip(',').startswith('TRAINER_PARTY_EVS'):
+                        iv_values = ''.join(data[2:]).replace('TRAINER_PARTY_EVS(', '').replace(')', '').split(',')
+                        new_mon.evs[STAT_HP]  = int(iv_values[STAT_HP])
+                        new_mon.evs[STAT_ATK] = int(iv_values[STAT_ATK])
+                        new_mon.evs[STAT_DEF] = int(iv_values[STAT_DEF])
+                        new_mon.evs[STAT_SPE] = int(iv_values[STAT_SPE])
+                        new_mon.evs[STAT_SPA] = int(iv_values[STAT_SPA])
+                        new_mon.evs[STAT_SPD] = int(iv_values[STAT_SPD])
                 if field == '.lvl':
                     new_mon.level = int(data[2].strip(','))
                 if field == '.species':
@@ -916,7 +925,36 @@ class ParseRepoDataExpansion():
                         while len(moves) < 4:
                             moves.append('MOVE_NONE')
                         new_mon.moves = moves
-    
+                if field == '.nature':
+                    new_mon.nature = data[2].strip('",')
+                if field == '.gender':
+                    new_mon.gender = data[2].strip('",')
+                if field == '.ability':
+                    new_mon.ability = data[2].strip('",')
+                if field == '.ball':
+                    new_mon.ball = data[2].strip('",')
+                if field == '.friendship':
+                    new_mon.friendship = int(data[2].strip(','))
+                if field == '.isShiny':
+                    if data[2].strip(',') == 'TRUE':
+                        new_mon.is_shiny = True
+                    else:
+                        new_mon.is_shiny = False
+                if field == '.teraType':
+                    new_mon.tera_type = data[2].strip('",')
+                if field == '.gigantamaxFactor':
+                    if data[2].strip(',') == 'TRUE':
+                        new_mon.gigantamax_factor = True
+                    else:
+                        new_mon.gigantamax_factor = False
+                if field == '.shouldUseDynamax':
+                    if data[2].strip(',') == 'TRUE':
+                        new_mon.use_dynamax = True
+                    else:
+                        new_mon.use_dynamax = False
+                if field == '.dynamaxLevel':
+                    new_mon.dynamax_lvl = data[2].strip(',')
+
         return party
 
 
