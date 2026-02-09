@@ -344,17 +344,12 @@ class App(tk.Tk):
             canvas_mon_pic_when_files_missing.grid(row=0, column=0, rowspan=2, padx=(0, 10))
 
         # Second column: Two rows, each with a toggle button
-        self.current_mon_is_shiny  = tk.BooleanVar(value=False)
-        self.current_mon_dinamaxes = tk.BooleanVar(value=False)
-        
-        self.photoimage_star_icon = tk.PhotoImage(file=STAR_ICON)
-        self.button_shiny_toggle = ttk.Button(frame_mon_pic_and_toggles, text='Shiny', image=self.photoimage_star_icon, state="disabled")
-        self.button_shiny_toggle.grid(row=0, column=1, sticky="w", pady=2)
-
-        self.photoimage_dynamax_icon = tk.PhotoImage(file=DYNAMAX_ICON)
-        self.button_toggle_dynamax = ttk.Button(frame_mon_pic_and_toggles, text="Dynamax", image=self.photoimage_dynamax_icon, state="disabled")
-        self.button_toggle_dynamax.grid(row=1, column=1, sticky="w", pady=2)
-        
+        self.current_mon_gender_var = tk.StringVar(value=self.list_gender_options[0])
+        self.radio_mon_gender = []
+        for i, opt in enumerate(self.list_gender_options):
+            rb = ttk.Radiobutton(frame_mon_pic_and_toggles, text=opt, variable=self.current_mon_gender_var, value=opt, state="disabled")
+            self.radio_mon_gender.append(rb)
+            rb.grid(row=i, column=1, sticky="w", padx=5)
 
         # Species
         ttk.Label(frame_selected_mon_data, text="Species:").grid(row=1, column=0, sticky="w", pady=4)
@@ -398,10 +393,18 @@ class App(tk.Tk):
             combobox_mon_movement.bind('<<ComboboxSelected>>', self.uncheck_default_moves)
             self.combobox_mon_movements.append(combobox_mon_movement)
 
+        # IVs/EVs y pestaña de configuración extra
+        notebook_mon_stats = ttk.Notebook(frame_selected_mon_data)
+        notebook_mon_stats.grid(row=21, column=0, columnspan=4, sticky="ew", pady=(12, 4))
+
+        # Tab IVs/EVs
+        tab_ivs_evs = ttk.Frame(notebook_mon_stats)
+        notebook_mon_stats.add(tab_ivs_evs, text="IVs/EVs")
+
         # IVs
-        ttk.Label(frame_selected_mon_data, text="IVs:").grid(row=21, column=0, sticky="w", pady=(12, 4), columnspan=4)
-        frame_mon_ivs = ttk.Frame(frame_selected_mon_data)
-        frame_mon_ivs.grid(row=22, column=0, columnspan=4, sticky="w")
+        ttk.Label(tab_ivs_evs, text="IVs:").grid(row=0, column=0, sticky="w", pady=(4, 2), columnspan=4)
+        frame_mon_ivs = ttk.Frame(tab_ivs_evs)
+        frame_mon_ivs.grid(row=1, column=0, columnspan=4, sticky="w")
         self.dict_spinboxes_ivs = {}
         list_mon_stats = ["HP", "ATK", "DEF", "SPD", "SPATK", "SPDEF"]
         for idx, stat in enumerate(list_mon_stats):
@@ -413,9 +416,9 @@ class App(tk.Tk):
             self.dict_spinboxes_ivs[stat] = spinbox
 
         # EVs
-        ttk.Label(frame_selected_mon_data, text="EVs:").grid(row=31, column=0, sticky="w", pady=(12, 4), columnspan=4)
-        frame_mon_evs = ttk.Frame(frame_selected_mon_data)
-        frame_mon_evs.grid(row=32, column=0, columnspan=4, sticky="w")
+        ttk.Label(tab_ivs_evs, text="EVs:").grid(row=2, column=0, sticky="w", pady=(12, 2), columnspan=4)
+        frame_mon_evs = ttk.Frame(tab_ivs_evs)
+        frame_mon_evs.grid(row=3, column=0, columnspan=4, sticky="w")
         self.dict_spinboxes_evs = {}
         for idx, stat in enumerate(list_mon_stats):
             col = 0 if idx < 3 else 1
@@ -424,6 +427,21 @@ class App(tk.Tk):
             spinbox = tk.Spinbox(frame_mon_evs, from_=0, to=255, width=5, state="disabled")
             spinbox.grid(row=row, column=col*2+1, sticky="w", pady=2)
             self.dict_spinboxes_evs[stat] = spinbox
+
+        # Tab Other settings (en blanco)
+        tab_other_settings = ttk.Frame(notebook_mon_stats)
+        notebook_mon_stats.add(tab_other_settings, text="Other settings")
+
+        self.current_mon_is_shiny  = tk.BooleanVar(value=False)
+        self.current_mon_dinamaxes = tk.BooleanVar(value=False)
+        
+        self.photoimage_star_icon = tk.PhotoImage(file=STAR_ICON)
+        self.button_shiny_toggle = ttk.Button(tab_other_settings, text='Shiny', image=self.photoimage_star_icon, state="disabled")
+        self.button_shiny_toggle.grid(row=0, column=1, sticky="w", pady=2)
+
+        self.photoimage_dynamax_icon = tk.PhotoImage(file=DYNAMAX_ICON)
+        self.button_toggle_dynamax = ttk.Button(tab_other_settings, text="Dynamax", image=self.photoimage_dynamax_icon, state="disabled")
+        self.button_toggle_dynamax.grid(row=1, column=1, sticky="w", pady=2)
 
         self.button_save_mon = ttk.Button(frame_selected_mon_data, text="Save Pokémon", state=tk.DISABLED, command=self.save_mon_object)
         self.button_save_mon.grid(row=33, column=0, columnspan=4)
