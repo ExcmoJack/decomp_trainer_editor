@@ -35,6 +35,7 @@ def set_last_opened_project(path):
     with open(config_path, "w") as f:
         json.dump(config, f, indent=4)
 
+# IMG resources paths - Think about moving this to another file
 TRAINER_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "trainer_placeholder.png")
 MON_PIC_PLACEHOLDER = os.path.join(get_current_directory(), "assets", "pokemon_placeholder.png")
 STAR_ICON = os.path.join(get_current_directory(), "assets", "star.png")
@@ -61,11 +62,33 @@ class App(tk.Tk):
         super().__init__()
         self.init_window_data()    
 
+    ##########################################################
+    #               SETTING THE WINDOW FORMAT                #
+    ##########################################################
 
     def init_window_data(self):
         '''
         Initializes window-related data and prepares the main interface components.
         This method sets up variables, widgets, and any necessary state for the main window.
+
+        ```
+        ╔═════════════════════════════════════════════════════════════════════════╗
+        ║                                Menu bar                                 ║
+        ╠═══════════════════════╦══════════════════════╦══════════════════════════╣
+        ║                       ║                      ║                          ║
+        ║ col_trainer_selection ║ col_trainer_settings ║ col_trainer_mon_settings ║
+        ║                       ║                      ║                          ║
+        ║  - width: 340px       ║  - width:  auto      ║  - width:  auto          ║
+        ║  - border:  2px       ║  - border:  2px      ║  - border:  2px          ║
+        ║  - relief: Groove     ║  - relief: Groove    ║  - relief: Groove        ║
+        ║                       ║                      ║                          ║
+        ║                       ║                      ║                          ║
+        ║                       ║                      ║                          ║
+        ║                       ║                      ║                          ║
+        ╠═══════════════════════╩══════════════════════╩══════════════════════════╣
+        ║                               Status bar                                ║
+        ╚═════════════════════════════════════════════════════════════════════════╝
+        ```
         '''
         self.title("Decomp Trainer Editor")
         self.geometry("1366x768")
@@ -78,248 +101,340 @@ class App(tk.Tk):
         self.current_trainer_mon = 0
         self.resizable(False, False)
 
+        self.list_gender_options = ["MALE", "FEMALE"]
+
         self.create_menubar()
-        self.create_window_layout()
+        self.create_column_layout()
         self.create_status_bar()
 
+    ##########################################################
+    #               SETTING THE MENU BAR                     #
+    ##########################################################
 
     def create_menubar(self):
         '''
         Creates and configures the application's menu bar.
         This method sets up the main menu options and attaches them to the window.
-        '''
-        ############
-        # MENU BAR #
-        ############
 
+        **Workflow:**
+        1. Creates self.menu_bar calling tk.Menu(self)
+        2. Calls the functions to populate the several options.
+        3. Sets the root window to use the configured menu bar.
+        '''
         # Defining the top menu bar container
-        self.menubar = tk.Menu(self)
+        self.menu_bar = tk.Menu(self)
 
-        # File menu: It allows to open/save projects and exit the app.
-        self.file_menu = tk.Menu(self.menubar, tearoff=0)
-        file_menu_open = self.file_menu.add_command(label="Open project", command=self.open_project)
+        self.create_menu_bar_file_menu()
+        self.create_menu_bar_edit_menu()
+        self.create_menu_bar_help_menu()
+
+        # Set the root window to use this menu bar
+        self.config(menu=self.menu_bar)
+
+
+    def create_menu_bar_file_menu(self):
+        '''
+        It builds a set of commands to open/save projects and exit the app into the Menu Bar (`self.menu_bar`)
+        through the File button.
+
+        **Workflow:**
+        1. Creates the container into self.menu_bar with `tearoff = false` to avoid undocking from the menu.
+        2. Creates four widgets inside the File Menu with the `add_command` method:
+            * `file_menu_open`: labeled as "Open project", sets the command to the function `self.open_project`.
+              It will be enabled from the begining (`state=tk.NORMAL`)
+            * `file_menu_save`: labeled as "Save project", sets the command to the function `self.save_project`.
+              It will be disabled from the begining (`state=tk.DISABLED`) and set to `tk.NORMAL` when the project
+              is loaded.
+            * A separator using the `add_separator` method.
+            * `file_menu_exit`: labeled as "Exit", sets the command to the builtin function `self.quit`.
+              It will be enabled from the begining (`state=tk.NORMAL`).
+        3. Adds the container to the button labeled as "File" through the method `add_cascade`.
+           It will be enabled from the begining (`state=tk.NORMAL`)
+        '''
+        # Create the container inside the menu bar
+        self.file_menu = tk.Menu(self.menu_bar, tearoff=False)
+
+        # Set the widgets. Every of them have names in case it is needed an action for them.
+        file_menu_open = self.file_menu.add_command(label="Open project", command=self.open_project, state=tk.NORMAL)
         file_menu_save = self.file_menu.add_command(label="Save project", command=self.save_project, state=tk.DISABLED)
-        self.file_menu.add_separator()
-        file_menu_exit = self.file_menu.add_command(label="Exit", command=self.quit)
+        self.file_menu.add_separator() # This is a separator. Just decoration.
+        file_menu_exit = self.file_menu.add_command(label="Exit", command=self.quit, state=tk.NORMAL)
 
-        # Edit menu: It allows to copy/paste trainer settings or just Pokémon data. It will be disabled by default until a project is opened.
-        edit_menu = tk.Menu(self.menubar, tearoff=0)
-        edit_menu.add_command(label="Copy trainer")
-        edit_menu.add_command(label="Paste trainer")
-        edit_menu.add_separator()
-        edit_menu.add_command(label="Copy Pokémon")
-        edit_menu.add_command(label="Paste Pokémon")
-
-        # Help menu: It allows to access documentation and see info about the app.
-        help_menu = tk.Menu(self.menubar, tearoff=0)
-        help_menu.add_command(label="Documentation", command=self.launch_documentation)
-        help_menu.add_command(label="About", command=self.show_about_dialog)
-
-        # Adding all menus to the menubar and configuring the root window to use it
-        self.menubar.add_cascade(label="File", menu=self.file_menu)
-        self.menubar.add_cascade(label="Edit", menu=edit_menu, state=tk.DISABLED)
-        self.menubar.add_cascade(label="Help", menu=help_menu)
-        self.config(menu=self.menubar)
+        # Add the container to the menu bar
+        self.menu_bar.add_cascade(label="File", menu=self.file_menu, state=tk.NORMAL)
 
 
-    def create_window_layout(self):
+    def create_menu_bar_edit_menu(self):
         '''
-        Creates and arranges the main window layout.
+        It builds a set of commands to copy/paste trainer settings or just Pokémon data into the Menu Bar (`self.menu_bar`)
+        through the Edit button. It will be disabled by default until a project is opened. *(Currently disabled - WIP)*
 
-        Sets up the three main columns: trainer selection, trainer info, and Pokémon info.
-        Initializes all widgets and containers for user interaction.
+        **Workflow:**
+        1. Creates the container into self.menu_bar with `tearoff = false` to avoid undocking from the menu.
+        2. Creates five widgets inside the Edit Menu with the `add_command` method:
+            * `edit_menu_copy_trainer`: labeled as "Copy trainer", sets the command to the function `TBD`.
+              It will be enabled from the begining (`state=tk.NORMAL`)
+            * `edit_menu_paste_trainer`: labeled as "Paste trainer", sets the command to the function `TBD`.
+              It will be disabled from the begining (`state=tk.DISABLED`) and set to `tk.NORMAL` when data is copied.
+            * A separator using the `add_separator` method.
+            * `edit_menu_copy_mon`: labeled as "Copy Pokémon", sets the command to the function `TBD`.
+              It will be enabled from the begining (`state=tk.NORMAL`)
+            * `edit_menu_paste_mon`: labeled as "Paste Pokémon", sets the command to the function `TBD`.
+              It will be disabled from the begining (`state=tk.DISABLED`) and set to `tk.NORMAL` when data is copied.
+        3. Adds the container to the button labeled as "Edit" through the method `add_cascade`.
+           It will be disabled from the begining (`state=tk.NORMAL`) and set to `tk.NORMAL` when the project is loaded.
         '''
-        # The main windows layout is divided in 3 columns. One will permit to select the trainer to edit,
-        # the second will show trainer general info and the third will show the selected Pokémon info from the party.
+        # Create the container inside the menu bar
+        edit_menu = tk.Menu(self.menu_bar, tearoff=False)
+        
+        # Set the widgets. Every of them have names in case it is needed an action for them.
+        edit_menu_copy_trainer  = edit_menu.add_command(label="Copy trainer", state=tk.NORMAL)
+        edit_menu_paste_trainer = edit_menu.add_command(label="Paste trainer", state=tk.DISABLED)
+        edit_menu.add_separator() # This is a separator. Just decoration.
+        edit_menu_copy_mon      = edit_menu.add_command(label="Copy Pokémon", state=tk.NORMAL)
+        edit_menu_paste_mon     = edit_menu.add_command(label="Paste Pokémon", state=tk.DISABLED)
+
+        # Add the container to the menu bar
+        self.menu_bar.add_cascade(label="Edit", menu=edit_menu, state=tk.DISABLED)
+
+
+    def create_menu_bar_help_menu(self):
+        '''
+        It builds a set of commands to access documentation and see info about the app into the Menu Bar (`self.menu_bar`)
+        through the Help button.
+
+        **Workflow:**
+        1. Creates the container into self.menu_bar with `tearoff = false` to avoid undocking from the menu.
+        2. Creates two widgets inside the Help Menu with the `add_command` method:
+            * `help_menu_docs`: labeled as "Documentation", sets the command to the function `self.launch_documentation`.
+              It will be enabled from the begining (`state=tk.NORMAL`)
+            * `help_menu_about`: labeled as "About", sets the command to the function `self.show_about_dialog`.
+              It will be enabled from the begining (`state=tk.NORMAL`)
+        3. Adds the container to the button labeled as "Help" through the method `add_cascade`.
+           It will be enabled from the begining (`state=tk.NORMAL`)
+        '''
+        # Create the container inside the menu bar
+        help_menu = tk.Menu(self.menu_bar, tearoff=False)
+
+        # Set the widgets. Every of them have names in case it is needed an action for them.
+        help_menu_docs  = help_menu.add_command(label="Documentation", command=self.launch_documentation, state=tk.NORMAL)
+        help_menu_about = help_menu.add_command(label="About", command=self.show_about_dialog, state=tk.NORMAL)
+
+        # Add the container to the menu bar
+        self.menu_bar.add_cascade(label="Help", menu=help_menu, state=tk.NORMAL)
+        
+    ##########################################################
+    #            SETTING THE WINDOW ARRANGEMENT              #
+    ##########################################################
+
+    def create_column_layout(self):
+        '''
+        The main_frame layout is divided in 3 columns. One will permit to select the trainer to edit,
+        the second will show trainer general info and the third will show the selected Pokémon info from the party.
+
+        **Workflow:**
+        1. Creates and arranges the `main_frame` layout. It is packed to fill the whole of the window with `fill=tk.BOTH` and `expand=True`
+           (apart from the menu bar and the status bar).
+        2. Sets up the three main columns: trainer selection, trainer info, and Pokémon info.
+        3. Initializes all widgets and containers for user interaction.
+        '''
+        # Create the main_frame and attach to the app window.
         self.main_frame = tk.Frame(self)
+        # Pack the main_frame to fill the screen.
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-        ##############################
-        # COLUMN 1 - Trainer ID List #
-        ##############################
+        self.create_col_trainer_selection()
+        self.create_col_trainer_settings()
+        self.create_col_trainer_mon_settings()
 
-        # Trainer list container. It will have a fixed width and scrollbars as the ID don't use to be too long.
-        column1_format = {"width": 340,"bd": 2, "relief": tk.GROOVE}
-        column1 = tk.Frame(self.main_frame, **column1_format)
-        column1.pack(side=tk.LEFT, fill=tk.Y)
-        column1.pack_propagate(False)
-        # Trainer list container set up.
-        listbox_frame = tk.Frame(column1)
+
+    def create_col_trainer_selection(self):
+        '''
+        Trainer list container. It will have a fixed width and scrollbars as the ID don't use to be too long.
+        
+        **Workflow:**
+        1.  Create the `col_trainer_selection` frame and pack it into `main_frame` to the left side (`side=tk.LEFT`) and filling in vertical (`fill=tk.Y`).
+            We set `pack_propagate` to `False` so the column will mantain its width when the Listbox is added.
+        2.  Create the `listbox_frame` inside the `col_trainer_selection` frame.
+            It is packed to fill the whole of the `col_trainer_selection` frame with `fill=tk.BOTH` and `expand=True`.
+        3.  Create the `listbox_scrollbar_x_frame` inside the `listbox_frame` frame.
+            This is an auxiliar frame to hold the listbox and the horizontal scrollbar below it.
+            It is packed to fill the whole of the left side (`side=tk.LEFT`) of the `listbox_frame` to make space to the `scrollbar_listbox_trainers_id_y`
+            at its right and it is filled with `fill=tk.BOTH` and `expand=True`.
+        4.  Create the `listbox_trainers_id` inside `listbox_scrollbar_x_frame`. `selectmode` set to `tk.SINGLE` to avoid multiple trainers selected.
+        5.  Add an event listener with `bind("<<ListboxSelect>>", self.update_trainer_fields_trigger)` the update of the trainer data
+            in the col_trainer_settings when switching the item selected.
+        6.  Pack `listbox_trainers_id` inside `listbox_scrollbar_x_frame`. We pack it on `side=tk.TOP` to make space to the `scrollbar_listbox_trainers_id_x`
+            on its bottom and it is filled horizontally.
+        7.  Create the `scrollbar_listbox_trainers_id_x` and link it to the `listbox_trainers_id` X movement with `command=self.listbox_trainers_id.xview`
+            and configurate the `listbox_trainers_id` with `config(xscrollcommand=scrollbar_listbox_trainers_id_x.set)`.
+        8.  Pack `scrollbar_listbox_trainers_id_x` inside `listbox_scrollbar_x_frame`. We pack it on `side=tk.BOTTOM` right down `listbox_trainers_id`
+            and it is filled horizontally.
+        9.  Create the `scrollbar_listbox_trainers_id_y` and link it to the `listbox_trainers_id` Y movement with `command=self.listbox_trainers_id.yview`
+            and configurate the `listbox_trainers_id` with `config(xscrollcommand=scrollbar_listbox_trainers_id_y.set)`.
+        10. Pack `scrollbar_listbox_trainers_id_x` inside `listbox_scrollbar`. We pack it on `side=tk.RIGHT` besides `listbox_scrollbar_x_frame`
+            and it is filled vertically.
+
+        ```
+        ╔═════════════════════════════════════════════════════════════════════════╗
+        ║ col_trainer_selection                                                   ║
+        ║╔═══════════════════════════════════════════════════════════════════════╗║
+        ║║ listbox_frame                                                         ║║
+        ║║╔═══════════════════════════════════╦═════════════════════════════════╗║║
+        ║║║ listbox_scrollbar_x_frame         ║                                 ║║║
+        ║║║╔═════════════════════════════════╗║                                 ║║║
+        ║║║║ listbox_trainers_id             ║║                                 ║║║
+        ║║║╠═════════════════════════════════╣║ scrollbar_listbox_trainers_id_y ║║║
+        ║║║║ scrollbar_listbox_trainers_id_x ║║                                 ║║║
+        ║║║╚═════════════════════════════════╝║                                 ║║║
+        ║║╚═══════════════════════════════════╩═════════════════════════════════╝║║
+        ║╚═══════════════════════════════════════════════════════════════════════╝║
+        ╚═════════════════════════════════════════════════════════════════════════╝
+        ```
+        '''
+        # Create the column frame inside the main_frame
+        col_trainer_selection = tk.Frame(self.main_frame, width=340, bd=2, relief=tk.GROOVE)
+        col_trainer_selection.pack(side=tk.LEFT, fill=tk.Y)
+        # Fix the width even containing smaller or bigger widgets.
+        col_trainer_selection.pack_propagate(False)
+        
+        # Create the listbox_frame inside the col_trainer_selection frame.
+        listbox_frame = tk.Frame(col_trainer_selection)
         listbox_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-        # Internal frame to hold the listbox and the horizontal scrollbar below it
-        listbox_pack_frame = tk.Frame(listbox_frame)
-        listbox_pack_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.listbox_trainers_id = tk.Listbox(listbox_pack_frame, selectmode=tk.SINGLE)
+
+        # Create the listbox_scrollbar_x_frame inside the listbox_frame frame.
+        # This is an auxiliar frame to hold the listbox and the horizontal scrollbar below it.
+        listbox_scrollbar_x_frame = tk.Frame(listbox_frame)
+        listbox_scrollbar_x_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # Create the listbox_trainers_id inside listbox_scrollbar_x_frame.
+        self.listbox_trainers_id = tk.Listbox(listbox_scrollbar_x_frame, selectmode=tk.SINGLE)
+        # Triggers the update of the trainer data on the col_trainer_settings on switch the item selected.
         self.listbox_trainers_id.bind("<<ListboxSelect>>", self.update_trainer_fields_trigger)
-        scrollbar_listbox_trainers_id_x = tk.Scrollbar(listbox_pack_frame, orient=tk.HORIZONTAL, command=self.listbox_trainers_id.xview)
-        self.listbox_trainers_id.config(xscrollcommand=scrollbar_listbox_trainers_id_x.set)
+        # Pack listbox_trainers_id inside listbox_scrollbar_x_frame.
         self.listbox_trainers_id.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        scrollbar_listbox_trainers_id_x.pack(side=tk.TOP, fill=tk.X)
-        # Add vertical scrollbar to the right of the listbox
+
+        # Create the scrollbar_listbox_trainers_id_x and link it to the listbox_trainers_id movement.
+        scrollbar_listbox_trainers_id_x = tk.Scrollbar(listbox_scrollbar_x_frame, orient=tk.HORIZONTAL, command=self.listbox_trainers_id.xview)
+        self.listbox_trainers_id.config(xscrollcommand=scrollbar_listbox_trainers_id_x.set)
+        # Pack scrollbar_listbox_trainers_id_x inside listbox_scrollbar_x_frame.
+        scrollbar_listbox_trainers_id_x.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # Create the scrollbar_listbox_trainers_id_y and link it to the listbox_trainers_id movement.
         scrollbar_listbox_trainers_id_y = tk.Scrollbar(listbox_frame, orient=tk.VERTICAL, command=self.listbox_trainers_id.yview)
         self.listbox_trainers_id.config(yscrollcommand=scrollbar_listbox_trainers_id_y.set)
+        # Pack scrollbar_listbox_trainers_id_y inside listbox_frame.
         scrollbar_listbox_trainers_id_y.pack(side=tk.RIGHT, fill=tk.Y)
 
-        ############################
-        # COLUMN 2 - Trainer Setup #
-        ############################
 
-        # Trainer info container. Info is supposed to be updated when selecting a trainer from the listbox. Maybe lacks of a save button?
-        column2_format = {"bd": 2, "relief": tk.GROOVE}
-        column2 = tk.Frame(self.main_frame, **column2_format)
-        column2.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    def create_col_trainer_settings(self):
+        '''
+        Trainer info container. Info is supposed to be updated when selecting a trainer from the listbox
+        
+        **Workflow:**
+        1.  Create the column frame inside the `main_frame`
+        2.  Create the form frame inside the `col_trainer_settings` frame
+        3.  Force the middle column to be wider than the other two. Without any `columnconfigure`, the first and the last will have the minimum width.
+        4.  Show trainer picture at the top left
+            - Add a `PhotoImage` widget with `TRAINER_PIC_PLACEHOLDER`
+            - In case the image is not found or can't be loaded, show a blank canvas instead
+        5.  Add radio buttons for gender. This will be saved in `self.current_trainer_gender_var`.
+        6.  Iterate through the options (`self.list_gender_options`) and set each radio in a row at the right of the `self.photoimage_trainer_pic`.
+        7.  Add Trainer ID entry widget and its label. Read only.
+        8.  Add a button to replace the `TRAINER_ID` in all directories. WIP. It will use a different dialog windows for this purpose.
+        9.  Add Trainer Pic and its label combobox widget to `frame_col_trainer_settings_form`. Empty values by default before loading a project.
+        10. Add Trainer Class combobox widget and its label to `frame_col_trainer_settings_form`. Empty values by default before loading a project.
+        11. Add Trainer Encounter Music combobox widget and its label to `frame_col_trainer_settings_form`. Empty values by default before loading a project.
+        12. Add Double Battle checkbox widget to `frame_col_trainer_settings_form`. Unchecked by default before loading a project.
+        13. Create the tabs frame inside the `col_trainer_settings` frame
+        14. This will force the notebook container to be full width.
+        15. Create the notebook frame inside the `frame_col_trainer_settings_tabs`
+        16. Add a button to save all the trainer data.
+        
+        '''
+        # Create the column frame inside the main_frame
+        col_trainer_settings = tk.Frame(self.main_frame, bd=2, relief=tk.GROOVE)
+        col_trainer_settings.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        self.list_gender_options = ["MALE", "FEMALE"]
+        # Create the form frame inside the col_trainer_settings frame
+        frame_col_trainer_settings_form = tk.Frame(col_trainer_settings)
+        frame_col_trainer_settings_form.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # This will force the middle column to be wider than the other two.
+        # Without any columnconfigure, the first and the last will have the minimum width.
+        frame_col_trainer_settings_form.columnconfigure(index=1, weight=1)
 
         # Show trainer picture at the top left
         try:
+            # Add a PhotoImage widget with TRAINER_PIC_PLACEHOLDER
             self.photoimage_trainer_pic = tk.PhotoImage(file=(TRAINER_PIC_PLACEHOLDER))
-            img_label = ttk.Label(column2, image=self.photoimage_trainer_pic)
+            img_label = ttk.Label(frame_col_trainer_settings_form, image=self.photoimage_trainer_pic)
             img_label.grid(row=0, column=0, rowspan=2)
         except Exception:
             # In case the image is not found or can't be loaded, show a blank canvas instead
-            self.canvas_trainer_pic_when_file_missing = tk.Canvas(column2, width=64, height=64, bg="#cccccc", highlightthickness=0)
+            self.canvas_trainer_pic_when_file_missing = tk.Canvas(frame_col_trainer_settings_form, width=64, height=64, bg="#cccccc", highlightthickness=0)
             self.canvas_trainer_pic_when_file_missing.grid(row=0, column=0, rowspan=2)
 
-        # Trainer ID and Name showed at the top right. Think about letting modify the ID.
-        # Maybe let be editable after clicking a button or the field itself. Read only by now.
-        row = 0
-        self.text_entry_trainer_id = ttk.Entry(column2)
-        self.text_entry_trainer_id.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
-        self.text_entry_trainer_id.config(state='readonly')
-        row += 1
-
-        self.text_entry_trainer_name = ttk.Entry(column2)
-        self.text_entry_trainer_name.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
-        self.text_entry_trainer_name.config(state='readonly')
-        row += 1
-
-        # Radio buttons for gender. This will be saved in self.current_trainer_gender_var.
+        # Add radio buttons for gender. This will be saved in self.current_trainer_gender_var.
         self.current_trainer_gender_var = tk.StringVar(value=self.list_gender_options[0])
-        frame_gender_options = ttk.Frame(column2)
-        frame_gender_options.grid(row=row, column=0, columnspan=2, sticky="w", padx=10, pady=2)
         self.radio_gender = []
         for i, opt in enumerate(self.list_gender_options):
-            rb = ttk.Radiobutton(frame_gender_options, text=opt, variable=self.current_trainer_gender_var, value=opt, state="disabled")
+            # Iterate through the options (self.list_gender_options) and set each radio in a row at the right of the self.photoimage_trainer_pic.
+            rb = ttk.Radiobutton(frame_col_trainer_settings_form, text=opt, variable=self.current_trainer_gender_var, value=opt, state="disabled")
             self.radio_gender.append(rb)
-            rb.pack(side=tk.LEFT, padx=5)
-        row += 1
+            rb.grid(row=i, column=1, sticky='w')
 
-        # Combobox for each remaining field. Empty values by default before loading a project.
-        ttk.Label(column2, text="Trainer Pic:").grid(row=row, column=0, sticky="w", padx=10, pady=5)
-        self.combobox_trainer_pic = ttk.Combobox(column2, values=[], state="disabled")
-        self.combobox_trainer_pic.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
+        # Add Trainer ID entry widget and its label. Read only.
+        ttk.Label(frame_col_trainer_settings_form, text="Trainer ID:").grid(row=2, column=0, sticky="w", padx=10, pady=5)
+        self.text_entry_trainer_id = ttk.Entry(frame_col_trainer_settings_form)
+        self.text_entry_trainer_id.grid(row=2, column=1, sticky="ew", padx=10, pady=5)
+        self.text_entry_trainer_id.config(state='readonly')
+
+        # Add a button to replace the TRAINER_ID in all directories. WIP. It will use a different dialog windows for this purpose.
+        self.button_edit_trainer_id = ttk.Button(frame_col_trainer_settings_form, text="Edit Trainer ID", state=tk.DISABLED)
+        self.button_edit_trainer_id.grid(row=2, column=2, sticky="ew")
+
+        # Add Trainer Name entry widget and its label to frame_col_trainer_settings_form. Read only until the project is loaded.
+        ttk.Label(frame_col_trainer_settings_form, text="Trainer Name:").grid(row=3, column=0, sticky="w", padx=10, pady=5)
+        self.text_entry_trainer_name = ttk.Entry(frame_col_trainer_settings_form)
+        self.text_entry_trainer_name.grid(row=3, column=1, sticky="ew", padx=10, pady=5)
+        self.text_entry_trainer_name.config(state='readonly')
+
+        # Add Trainer Pic and its label combobox widget to frame_col_trainer_settings_form. Empty values by default before loading a project.
+        ttk.Label(frame_col_trainer_settings_form, text="Trainer Pic:").grid(row=4, column=0, sticky="w", padx=10, pady=5)
+        self.combobox_trainer_pic = ttk.Combobox(frame_col_trainer_settings_form, values=[], state="disabled")
+        self.combobox_trainer_pic.grid(row=4, column=1, sticky="ew", padx=10, pady=5)
         self.combobox_trainer_pic.bind("<<ComboboxSelected>>", self.set_trainer_pic_trigger)
-        row += 1
 
-        ttk.Label(column2, text="Trainer Class:").grid(row=row, column=0, sticky="w", padx=10, pady=5)
-        self.combobox_trainer_class = ttk.Combobox(column2, values=[], state="disabled")
-        self.combobox_trainer_class.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
-        row += 1
+        # Add Trainer Class combobox widget and its label to frame_col_trainer_settings_form. Empty values by default before loading a project.
+        ttk.Label(frame_col_trainer_settings_form, text="Trainer Class:").grid(row=5, column=0, sticky="w", padx=10, pady=5)
+        self.combobox_trainer_class = ttk.Combobox(frame_col_trainer_settings_form, values=[], state="disabled")
+        self.combobox_trainer_class.grid(row=5, column=1, sticky="ew", padx=10, pady=5)
 
-        ttk.Label(column2, text="Encounter Music:").grid(row=row, column=0, sticky="w", padx=10, pady=5)
-        self.combobox_trainer_encounter_music = ttk.Combobox(column2, values=[], state="disabled")
-        self.combobox_trainer_encounter_music.grid(row=row, column=1, sticky="ew", padx=10, pady=5)
-        row += 1
+        # Add Trainer Encounter Music combobox widget and its label to frame_col_trainer_settings_form. Empty values by default before loading a project.
+        ttk.Label(frame_col_trainer_settings_form, text="Encounter Music:").grid(row=6, column=0, sticky="w", padx=10, pady=5)
+        self.combobox_trainer_encounter_music = ttk.Combobox(frame_col_trainer_settings_form, values=[], state="disabled")
+        self.combobox_trainer_encounter_music.grid(row=6, column=1, sticky="ew", padx=10, pady=5)
 
+        # Add Double Battle checkbox widget to frame_col_trainer_settings_form. Unchecked by default before loading a project.
         self.bool_double_battle = tk.BooleanVar(value=False)
-        self.checkbox_double_battle = ttk.Checkbutton(column2, text="Double Battle", variable=self.bool_double_battle, state="disabled")
-        self.checkbox_double_battle.grid(row=row, column=0, sticky="w", padx=10, pady=5)
-        row += 1
+        self.checkbox_double_battle = ttk.Checkbutton(frame_col_trainer_settings_form, text="Double Battle", variable=self.bool_double_battle, state="disabled")
+        self.checkbox_double_battle.grid(row=7, column=1, sticky="w", padx=10, pady=8)
 
-        # Here we will have a tabbed notebook with 3 tabs: Pokémon & Items, AI Flags and Places where the trainer battle is found.
-        # It is important to pay attention to this part as it is the most complex of the UI.
-        notebook_trainer_battle_settings = ttk.Notebook(column2)
-        notebook_trainer_battle_settings.grid(row=row, column=0, columnspan=2, sticky="ew", padx=10, pady=(10, 5))
+        # Create the tabs frame inside the col_trainer_settings frame
+        frame_col_trainer_settings_tabs = tk.Frame(col_trainer_settings)
+        frame_col_trainer_settings_tabs.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        # This will force the notebook container to be full width.
+        frame_col_trainer_settings_tabs.columnconfigure(index=0, weight=1)
 
-        # ------------------- #
-        # Party and Items tab #
-        # ------------------- #
-        tab_party_and_items = ttk.Frame(notebook_trainer_battle_settings)
-        notebook_trainer_battle_settings.add(tab_party_and_items, text="Party and Items")
+        # Create the notebook frame inside the frame_col_trainer_settings_tabs
+        self.create_notebook_trainer_battle_settings(frame_col_trainer_settings_tabs)
 
-        # Party and Items container. It will have two columns: Party on the left and Items on the right.
-        frame_party_and_items = ttk.Frame(tab_party_and_items)
-        frame_party_and_items.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # Add a button to save all the trainer data.
+        self.button_save_trainer = ttk.Button(col_trainer_settings, text="Save Trainer", state=tk.DISABLED, command=self.save_trainer_object)
+        self.button_save_trainer.pack(side=tk.BOTTOM, expand=False, pady=20)
 
-        # In the first column we will have the party listbox and buttons below it.
-        frame_party = ttk.Frame(frame_party_and_items)
-        frame_party.grid(row=0, column=0, sticky="nsw", padx=(0, 20))
-
-        # Here we have the party listbox. It is supposed to be populated with the Pokémon species in the party.
-        # Always with the limit of 6 Pokémon in the party.
-        ttk.Label(frame_party, text="Party").pack(anchor="w", pady=(0, 5))
-        self.listbox_mons_in_party = tk.Listbox(frame_party, height=6)
-        self.listbox_mons_in_party.pack(fill=tk.BOTH, expand=True)
-        self.listbox_mons_in_party.bind("<<ListboxSelect>>", self.update_mon_fields_trigger)
-
-
-        # Now this buttons may allow to move up/down the selected Pokémon in the party, add a new one or remove the selected one.
-        # They must be disabled if there is no project opened.
-        frame_party_list_management = ttk.Frame(frame_party)
-        frame_party_list_management.pack(fill=tk.X, pady=(8, 0))
-
-        self.button_party_mon_up     = ttk.Button(frame_party_list_management, text="Up", state=tk.DISABLED, command=self.move_up_party_mon)
-        self.button_party_mon_down   = ttk.Button(frame_party_list_management, text="Down", state=tk.DISABLED, command=self.move_down_party_mon)
-        self.button_party_add_mon    = ttk.Button(frame_party_list_management, text="Add", state=tk.DISABLED, command=self.add_party_mon)
-        self.button_party_remove_mon = ttk.Button(frame_party_list_management, text="Remove", state=tk.DISABLED, command=self.del_party_mon)
-
-        self.button_party_mon_up.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        self.button_party_mon_down.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        self.button_party_remove_mon.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-        self.button_party_add_mon.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
-
-        # The second column will have the four items comboboxes.
-        frame_trainer_items = ttk.Frame(frame_party_and_items)
-        frame_trainer_items.grid(row=0, column=1, sticky="nsew")
-
-        ttk.Label(frame_trainer_items, text="Items").pack(anchor="w", pady=(0, 5))
-
-        # In this case we will define the items as a list of comboboxes.
-        self.list_combobox_trainer_item = []
-        for i in range(4):
-            combobox_trainer_item = ttk.Combobox(frame_trainer_items, values=[], state="disabled")
-            combobox_trainer_item.pack(fill=tk.X, pady=2)
-            self.list_combobox_trainer_item.append(combobox_trainer_item)
-
-        frame_party_and_items.columnconfigure(1, weight=1)
-
-        # -------------------- #
-        # Trainer AI flags tab #
-        # -------------------- #
-        self.tab_trainer_ai_flags = ttk.Frame(notebook_trainer_battle_settings)
-        notebook_trainer_battle_settings.add(self.tab_trainer_ai_flags, text="AI Flags")
-        self.list_ai_flag = []
-        # In pokeemerald expansion there are some presets for AI flags. We will add a combobox to select one and a button to apply them
-        # only if the project is based on pokeemerald expansion. Currently always shown as we don't detect the project type.
-        frame_ai_flags_presets = ttk.Frame(self.tab_trainer_ai_flags)
-        frame_ai_flags_presets.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
-        ttk.Label(frame_ai_flags_presets, text="Preset:").pack(side=tk.LEFT, padx=(0, 5))
-        self.combobox_ai_flags_presets = ttk.Combobox(frame_ai_flags_presets, values=["Basic Trainer", "Smart Trainer", "Predict"], state="disabled")
-        self.combobox_ai_flags_presets.pack(side=tk.LEFT, padx=(0, 5))
-        self.button_apply_ai_flags_preset = ttk.Button(frame_ai_flags_presets, text="Apply", state=tk.DISABLED)
-        self.button_apply_ai_flags_preset.pack(side=tk.LEFT)
-        
-        # ---------- #
-        # Places tab #
-        # ---------- #
-        tab_trainer_places = ttk.Frame(notebook_trainer_battle_settings)
-        notebook_trainer_battle_settings.add(tab_trainer_places, text="Found at...")
-        # List of maps where the trainer battle is found.
-        # The idea is to scan all /data/maps/scripts.inc to find all ocurrences of the trainer ID. Pending implementation.
-        ttk.Label(tab_trainer_places, text="Maps where the trainer was found").pack(anchor="w", pady=(10, 5), padx=10)
-        self.listbox_trainer_map_appereances = tk.Listbox(tab_trainer_places, height=8)
-        self.listbox_trainer_map_appereances.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
-        self.button_find_trainer_in_maps = ttk.Button(tab_trainer_places, text="Find trainer", state=tk.DISABLED, command=self.find_trainer_in_maps)
-        self.button_find_trainer_in_maps.pack(side=tk.BOTTOM, pady=(0, 10))
-        row += 1
-
-        self.button_save_trainer = ttk.Button(column2, text="Save Trainer", state=tk.DISABLED, command=self.save_trainer_object)
-        self.button_save_trainer.grid(row=row, column=0, columnspan=2, sticky="ew", padx=10, pady=(10, 5))
-
-        ####################################
-        # COLUMN 3 - Pokemon configuration #
-        ####################################
+    def create_col_trainer_mon_settings(self):
         column3_format = {"bd": 2, "relief": tk.GROOVE}
         column3 = tk.Frame(self.main_frame, **column3_format)
         column3.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -402,9 +517,9 @@ class App(tk.Tk):
         notebook_mon_stats.add(tab_ivs_evs, text="IVs/EVs")
 
         # IVs
-        ttk.Label(tab_ivs_evs, text="IVs:").grid(row=0, column=0, sticky="w", pady=(4, 2), columnspan=4)
+        ttk.Label(tab_ivs_evs, text="IVs:").grid(row=0, column=1, sticky="w", pady=(4, 2), columnspan=3)
         frame_mon_ivs = ttk.Frame(tab_ivs_evs)
-        frame_mon_ivs.grid(row=1, column=0, columnspan=4, sticky="w")
+        frame_mon_ivs.grid(row=2, column=0, columnspan=4, sticky="w")
         self.dict_spinboxes_ivs = {}
         list_mon_stats = ["HP", "ATK", "DEF", "SPD", "SPATK", "SPDEF"]
         for idx, stat in enumerate(list_mon_stats):
@@ -435,18 +550,109 @@ class App(tk.Tk):
         self.current_mon_is_shiny  = tk.BooleanVar(value=False)
         self.current_mon_dinamaxes = tk.BooleanVar(value=False)
         
-        self.photoimage_star_icon = tk.PhotoImage(file=STAR_ICON)
-        self.button_shiny_toggle = ttk.Button(tab_other_settings, text='Shiny', image=self.photoimage_star_icon, state="disabled")
-        self.button_shiny_toggle.grid(row=0, column=1, sticky="w", pady=2)
+        self.button_shiny_toggle = ttk.Checkbutton(tab_other_settings, text='Shiny', state="disabled")
+        self.button_shiny_toggle.grid(row=0, column=0, sticky="w", pady=4)
 
-        self.photoimage_dynamax_icon = tk.PhotoImage(file=DYNAMAX_ICON)
-        self.button_toggle_dynamax = ttk.Button(tab_other_settings, text="Dynamax", image=self.photoimage_dynamax_icon, state="disabled")
-        self.button_toggle_dynamax.grid(row=1, column=1, sticky="w", pady=2)
+        self.button_toggle_dynamax = ttk.Checkbutton(tab_other_settings, text="Dynamax", state="disabled")
+        self.button_toggle_dynamax.grid(row=1, column=0, sticky="w", pady=4)
+
+        ttk.Label(tab_other_settings, text="Dynamax level: ").grid(row=2, column=0, sticky="e", padx=(6,1))
+        self.spinbox_dynamax_level = tk.Spinbox(tab_other_settings, from_=0, to=255, width=5, state="disabled")
 
         self.button_save_mon = ttk.Button(frame_selected_mon_data, text="Save Pokémon", state=tk.DISABLED, command=self.save_mon_object)
         self.button_save_mon.grid(row=33, column=0, columnspan=4)
 
         frame_selected_mon_data.columnconfigure(1, weight=1)
+
+
+    def create_notebook_trainer_battle_settings(self, parent):
+        '''
+        Here we will have a tabbed notebook with 3 tabs: Pokémon & Items, AI Flags and Places where the trainer battle is found.
+        It is important to pay attention to this part as it is the most complex of the UI.
+        '''
+        notebook_trainer_battle_settings = ttk.Notebook(parent)
+        notebook_trainer_battle_settings.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(10, 5))
+
+        # ------------------- #
+        # Party and Items tab #
+        # ------------------- #
+        tab_party_and_items = ttk.Frame(notebook_trainer_battle_settings)
+        notebook_trainer_battle_settings.add(tab_party_and_items, text="Party and Items")
+
+        # Party and Items container. It will have two columns: Party on the left and Items on the right.
+        frame_party_and_items = ttk.Frame(tab_party_and_items)
+        frame_party_and_items.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # In the first column we will have the party listbox and buttons below it.
+        frame_party = ttk.Frame(frame_party_and_items)
+        frame_party.grid(row=0, column=0, sticky="nsw", padx=(0, 20))
+
+        # Here we have the party listbox. It is supposed to be populated with the Pokémon species in the party.
+        # Always with the limit of 6 Pokémon in the party.
+        ttk.Label(frame_party, text="Party").pack(anchor="w", pady=(0, 5))
+        self.listbox_mons_in_party = tk.Listbox(frame_party, height=6)
+        self.listbox_mons_in_party.pack(fill=tk.BOTH, expand=True)
+        self.listbox_mons_in_party.bind("<<ListboxSelect>>", self.update_mon_fields_trigger)
+
+
+        # Now this buttons may allow to move up/down the selected Pokémon in the party, add a new one or remove the selected one.
+        # They must be disabled if there is no project opened.
+        frame_party_list_management = ttk.Frame(frame_party)
+        frame_party_list_management.pack(fill=tk.X, pady=(8, 0))
+
+        self.button_party_mon_up     = ttk.Button(frame_party_list_management, text="Up", state=tk.DISABLED, command=self.move_up_party_mon)
+        self.button_party_mon_down   = ttk.Button(frame_party_list_management, text="Down", state=tk.DISABLED, command=self.move_down_party_mon)
+        self.button_party_add_mon    = ttk.Button(frame_party_list_management, text="Add", state=tk.DISABLED, command=self.add_party_mon)
+        self.button_party_remove_mon = ttk.Button(frame_party_list_management, text="Remove", state=tk.DISABLED, command=self.del_party_mon)
+
+        self.button_party_mon_up.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        self.button_party_mon_down.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        self.button_party_remove_mon.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+        self.button_party_add_mon.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=2)
+
+        # The second column will have the four items comboboxes.
+        frame_trainer_items = ttk.Frame(frame_party_and_items)
+        frame_trainer_items.grid(row=0, column=1, sticky="nsew")
+
+        ttk.Label(frame_trainer_items, text="Items").pack(anchor="w", pady=(0, 5))
+
+        # In this case we will define the items as a list of comboboxes.
+        self.list_combobox_trainer_item = []
+        for i in range(4):
+            combobox_trainer_item = ttk.Combobox(frame_trainer_items, values=[], state="disabled")
+            combobox_trainer_item.pack(fill=tk.X, pady=2)
+            self.list_combobox_trainer_item.append(combobox_trainer_item)
+
+        frame_party_and_items.columnconfigure(1, weight=1)
+
+        # -------------------- #
+        # Trainer AI flags tab #
+        # -------------------- #
+        self.tab_trainer_ai_flags = ttk.Frame(notebook_trainer_battle_settings)
+        notebook_trainer_battle_settings.add(self.tab_trainer_ai_flags, text="AI Flags")
+        self.list_ai_flag = []
+        # In pokeemerald expansion there are some presets for AI flags. We will add a combobox to select one and a button to apply them
+        # only if the project is based on pokeemerald expansion. Currently always shown as we don't detect the project type.
+        frame_ai_flags_presets = ttk.Frame(self.tab_trainer_ai_flags)
+        frame_ai_flags_presets.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+        ttk.Label(frame_ai_flags_presets, text="Preset:").pack(side=tk.LEFT, padx=(0, 5))
+        self.combobox_ai_flags_presets = ttk.Combobox(frame_ai_flags_presets, values=["Basic Trainer", "Smart Trainer", "Predict"], state="disabled")
+        self.combobox_ai_flags_presets.pack(side=tk.LEFT, padx=(0, 5))
+        self.button_apply_ai_flags_preset = ttk.Button(frame_ai_flags_presets, text="Apply", state=tk.DISABLED)
+        self.button_apply_ai_flags_preset.pack(side=tk.LEFT)
+        
+        # ---------- #
+        # Places tab #
+        # ---------- #
+        tab_trainer_places = ttk.Frame(notebook_trainer_battle_settings)
+        notebook_trainer_battle_settings.add(tab_trainer_places, text="Found at...")
+        # List of maps where the trainer battle is found.
+        ttk.Label(tab_trainer_places, text="Maps where the trainer was found").pack(anchor="w", pady=(10, 5), padx=10)
+        self.listbox_trainer_map_appereances = tk.Listbox(tab_trainer_places, height=8)
+        self.listbox_trainer_map_appereances.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        self.button_find_trainer_in_maps = ttk.Button(tab_trainer_places, text="Find trainer", state=tk.DISABLED, command=self.find_trainer_in_maps)
+        self.button_find_trainer_in_maps.pack(side=tk.BOTTOM, pady=(0, 10))
+
 
 
     def create_status_bar(self):
@@ -464,7 +670,7 @@ class App(tk.Tk):
         ''' Open a folder dialog to select the project path and load its data. WIP.'''
         path = filedialog.askdirectory(title="Select project folder", initialdir=get_last_opened_project())
         if path:
-            self.menubar.destroy()
+            self.menu_bar.destroy()
             self.main_frame.destroy()
             self.status.destroy()
             self.init_window_data()
@@ -518,7 +724,7 @@ class App(tk.Tk):
         ]
 
         self.file_menu.entryconfig(1, state=tk.NORMAL)
-        self.menubar.entryconfig("Edit", state="normal")
+        self.menu_bar.entryconfig("Edit", state="normal")
         self.text_entry_trainer_name.config(state="normal")
         self.checkbox_double_battle.config(state="normal")
 
