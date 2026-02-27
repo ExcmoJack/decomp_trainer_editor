@@ -48,7 +48,7 @@ class ParseRepoDataVanilla():
                 trainer_encounter_music_id_list.append(trainer_encounter_music_id)
         
         return {
-            'TRAINER_PIC': trainer_class_id_list,
+            'TRAINER_PIC': trainer_pic_id_list,
             'TRAINER_CLASS': trainer_class_id_list,
             'TRAINER_ENCOUNTER_MUSIC': trainer_encounter_music_id_list
         }
