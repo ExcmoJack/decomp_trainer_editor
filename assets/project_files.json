@@ -55,7 +55,7 @@
             "battle_ai":        "/include/constants/battle_ai.h",
             "items":            "/include/constants/items.h",
             "mon_pics_dir":     "/src/data/graphics/pokemon.h",
-            "mon_pics_ptr":     "/src/data/graphics/pokemon.h",
+            "mon_pics_ptr":     "/src/data/pokemon/species_info/",
             "moves":            "/include/constants/moves.h",
             "opponents":        "/include/constants/opponents.h",
             "natures":          "/include/constants/pokemon.h",

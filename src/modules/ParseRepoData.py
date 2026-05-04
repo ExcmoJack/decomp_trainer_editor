@@ -1,5 +1,7 @@
 import os
-from modules.classes import Trainer, Pokemon, AiFlagList
+from modules.classes import Trainer, Pokemon, AiFlagList, DifficultyLevel
+
+LAST_GEN_MONS = 9
 
 class ParseRepoDataVanilla():
     ''' This class defines all the functions needed to get all the data needed from the project_files for each version
@@ -433,7 +435,7 @@ class ParseRepoDataExpansion():
 
 
     def parse_opponents_file(self):
-        ''' Read and store in a list the trainer IDs from constants/opponents.h file. '''
+        ''' Read and store in a list the trainer IDs from 'opponents' file. '''
         trainer_id_list = []
 
         with open(os.path.join(self.project_path, self.project_files['opponents'].lstrip('/')), 'r') as f:
@@ -444,11 +446,11 @@ class ParseRepoDataExpansion():
                 trainer_name = line.split()[1]
                 trainer_id_list.append(trainer_name)
 
-        return trainer_id_list[1:] # Remove TRAINER_NONE
+        return trainer_id_list[1:-1] # Remove TRAINER_NONE and TRAINER_PARTNER
     
 
     def parse_trainer_info_file(self):
-        ''' Read and store in a dict list the trainer info from constants/trainers.h file. '''
+        ''' Read and store in a dict list the trainer info from 'trainer_info' file. '''
         trainer_pic_id_list = []
         trainer_class_id_list = []
         trainer_encounter_music_id_list = []
@@ -475,7 +477,7 @@ class ParseRepoDataExpansion():
     
 
     def parse_items_file(self):
-        ''' Read and store in a list the item IDs from constants/items.h file.'''
+        ''' Read and store in a list the item IDs from 'items' file.'''
         item_id_list = []
 
         with open(os.path.join(self.project_path, self.project_files["items"].lstrip("/")), "r") as f:
@@ -495,7 +497,7 @@ class ParseRepoDataExpansion():
     
 
     def parse_battle_ai_file(self):
-        ''' Read and store in a list the AI flags from constants/battle_ai.h file. '''
+        ''' Read and store in a list the AI flags from 'battle_ai' file. '''
         ai_flag_id_list = []
 
         with open(os.path.join(self.project_path, self.project_files["battle_ai"].lstrip("/")), "r") as f:
@@ -509,7 +511,7 @@ class ParseRepoDataExpansion():
     
 
     def parse_species_file(self):
-        ''' Read and store in a list the species IDs from constants/species.h file. 
+        ''' Read and store in a list the species IDs from 'species' file. 
             Avoids SPECIES_EGG and old UNOWN slots.'''
         species_id_list = []
 
@@ -527,7 +529,7 @@ class ParseRepoDataExpansion():
     
 
     def parse_moves_file(self):
-        ''' Read and store in a list the moves IDs from constants/moves.h file. Limited to MOVES_COUNT. '''
+        ''' Read and store in a list the moves IDs from 'moves' file. Limited to MOVES_COUNT. '''
         move_id_list = []
 
         with open(os.path.join(self.project_path, self.project_files["moves"].lstrip("/")), "r") as f:
@@ -565,7 +567,9 @@ class ParseRepoDataExpansion():
         PIC_PATH = 2
 
         for pic_pointer_data in trainer_pics_ptr_content:
-            new_pic = {'id': 'TRAINER_PIC_' + pic_pointer_data[PIC_ID], 'pointer': pic_pointer_data[PIC_POINTER], 'path': ''}
+            new_pic = {'id': pic_pointer_data[PIC_ID], 'pointer': pic_pointer_data[PIC_POINTER], 'path': ''}
+            if not new_pic['id'].startswith('TRAINER_PIC_'):
+                new_pic['id'] = 'TRAINER_PIC_' + new_pic['id']
             trainer_pics_dict_list.append(new_pic)
         
         for pic_path_data in trainer_pics_dir_content:
@@ -617,7 +621,12 @@ class ParseRepoDataExpansion():
             Returns a dict list {'id': 'SPECIES_XXX' , 'pointer': gMonFrontPic_Xxx, 'path': 'xxx.png'}'''
         mon_pics_dict_list = []
 
-        mon_pics_ptr_content = self._parse_mon_pics_ptr_file()
+        # The way info is stored in expansion is divided in a file for each generation
+        # so we will run the parsing functions for each generation file and merge the results
+        mon_pics_ptr_content = []
+        for gen in range(1, LAST_GEN_MONS + 1):
+            gen_ptr_content = self._parse_mon_pics_ptr_file(gen)
+            mon_pics_ptr_content.extend(gen_ptr_content)
         mon_pics_dir_content = self._parse_mon_pics_dir_file()
 
         PIC_ID = 0
@@ -625,7 +634,9 @@ class ParseRepoDataExpansion():
         PIC_PATH = 2
 
         for pic_pointer_data in mon_pics_ptr_content:
-            new_pic = {'species': 'SPECIES_' + pic_pointer_data[PIC_ID], 'pointer': pic_pointer_data[PIC_POINTER], 'path': ''}
+            new_pic = {'species': pic_pointer_data[PIC_ID], 'pointer': pic_pointer_data[PIC_POINTER], 'path': ''}
+            if not new_pic['species'].startswith('SPECIES_'):
+                new_pic['species'] = 'SPECIES_' + new_pic['species']
             mon_pics_dict_list.append(new_pic)
         
         for pic_path_data in mon_pics_dir_content:
@@ -646,21 +657,31 @@ class ParseRepoDataExpansion():
         return mon_pics_dict_list
     
 
-    def _parse_mon_pics_ptr_file(self):
+    def _parse_mon_pics_ptr_file(self, gen):
         ''' Read and store in a list the SPECIES_SPRITE IDs and pointers from mon_pics_ptr file. Returns a tuple list (ID, Pointer).'''
         mon_pics_ptr_content = []
-        with open(os.path.join(self.project_path, self.project_files["mon_pics_ptr"].lstrip("/")), "r") as f:
+        file_name = 'gen_' + str(gen) + '_families.h'
+        file_path = os.path.join(self.project_path, self.project_files["mon_pics_ptr"].lstrip("/"), file_name)
+        with open(file_path, "r") as f:
             full_content = f.readlines()
 
         PIC_ID = 0
         PIC_POINTER = 1
 
+        entry = [None, None]
+        inside_entry = False
         for line in full_content:
-            if line.strip().startswith('SPECIES_SPRITE('):
-                data = line.strip()[15:-2].replace(' ', '')
-                entry = data.split(',')
+            data = line.strip().split(' ')
+            if line.strip().startswith('[SPECIES_'):
+                inside_entry = True
+                entry[PIC_ID] = data[0].replace('[', '').replace(']', '')
+            if line.strip().startswith('.frontPic') and inside_entry:
+                entry[PIC_POINTER] = data[2][:-1]
                 new_pic = (entry[PIC_ID], entry[PIC_POINTER])
                 mon_pics_ptr_content.append(new_pic)
+                entry = [None, None]
+                inside_entry = False
+
         
         return mon_pics_ptr_content
 
@@ -683,7 +704,7 @@ class ParseRepoDataExpansion():
 
 
     def parse_trainer_data_file(self, ai_flags, gender_options):
-        ''' Parse the trainer info from data/trainers.h file and process it to self.project_data. 
+        ''' Parse the trainer info from 'trainer_data' file and process it to self.project_data. 
         
             * .partyFlags - It will be adquired from party macros
             * .trainerClass
@@ -706,10 +727,26 @@ class ParseRepoDataExpansion():
             full_content = f.readlines()
 
         new_trainer = None
+        difficulty_level = DifficultyLevel()
+        reading_party = False
+        party_fragment = []
         for line in full_content:
             data = line.strip().split(" ")
             field = data[0]
-            if field[:9] == '[TRAINER_':
+            if reading_party:
+                party_fragment.append(line)
+                if line == '        },\n':
+                    reading_party = False
+                    new_trainer.pokemon = self._parse_trainer_parties_from_header(party_fragment[1:-1])
+                    party_fragment = []
+            if field.startswith('[DIFFICULTY_'):
+                for level in difficulty_level.levels:
+                    if level in field:
+                        difficulty_level.current_level = level
+                trainer_id = field[difficulty_level.get_level_length() + 3:-1]
+                new_trainer = Trainer(trainer_id)
+                uses_party_macro = True
+            if field[:9] == '[TRAINER_': # Kept for backward compatibility with older expansions
                 new_trainer = Trainer(line.strip().split(" ")[0][1:-1])
                 uses_party_macro = True
             elif field == '.trainerClass':
@@ -744,12 +781,21 @@ class ParseRepoDataExpansion():
                 uses_party_macro = False
             elif field == '.partySize':
                 uses_party_macro = False
+                new_trainer.party_size = int(data[2].strip(','))
             elif field == '.party':
                 if uses_party_macro:
                     party_pointer = data[2].split('(')[1].strip('),')
                     new_trainer.party_name = party_pointer
                     new_trainer.pokemon = self._parse_trainer_parties_file(party_pointer)
-            elif field == '},':
+                elif data[2:] == '(const struct TrainerMon[])'.split(' '):
+                    if new_trainer.party_size == 0:
+                        trainer_party = []
+                        trainer_party.append(Pokemon('SPECIES_NONE'))
+                        new_trainer.pokemon = trainer_party
+                    else:
+                        reading_party = True
+
+            elif line == '    },\n':
                 trainer_list.append(new_trainer)
                 new_trainer = None
         
@@ -757,7 +803,7 @@ class ParseRepoDataExpansion():
 
 
     def _parse_trainer_parties_file(self, pointer):
-        ''' Parse the party Pokémon data from data/trainer_parties.h file and process it to return as a Pokémon list. '''
+        ''' Parse the party Pokémon data from 'trainer_parties' file and process it to return as a Pokémon list. '''
 
         with open(os.path.join(self.project_path, self.project_files["trainer_parties"].lstrip("/")), "r") as f:
             full_content = f.readlines()
@@ -809,6 +855,147 @@ class ParseRepoDataExpansion():
                     party_pointer_found = False
     
         return party
+
+
+    def _parse_trainer_parties_from_header(self, fragment):
+        ''' Parse the party Pokémon data from 'trainer_data' file and process it to return as a Pokémon list. '''
+
+        STAT_HP  = 0
+        STAT_ATK = 1
+        STAT_DEF = 2
+        STAT_SPE = 3
+        STAT_SPA = 4
+        STAT_SPD = 5
+
+        party = []
+        new_mon = Pokemon('SPECIES_NONE')
+
+        reading_moves = False
+        
+        for line in fragment:
+            data = line.strip().split(" ")
+            if reading_moves:
+                if data[0].startswith('MOVE_'):
+                    moves.append(data[0].strip('",{}'))
+                elif data[0] == '},':
+                    reading_moves = False
+                    while len(moves) < 4:
+                        moves.append('MOVE_NONE')
+                    new_mon.moves = moves
+            else:
+                field = data[0]
+                if (field == '}' or field == '},') and not reading_moves:
+
+                    party.append(new_mon)
+                    new_mon = Pokemon('SPECIES_NONE')
+                if field == '.iv':
+                    if (data[2].strip(',')).isdecimal():
+                        new_mon.iv = int(data[2].strip(','))
+                    elif data[2].strip(',').startswith('TRAINER_PARTY_IVS'):
+                        iv_values = ''.join(data[2:]).replace('TRAINER_PARTY_IVS(', '').replace(')', '').split(',')
+                        new_mon.ivs[STAT_HP]  = int(iv_values[STAT_HP])
+                        new_mon.ivs[STAT_ATK] = int(iv_values[STAT_ATK])
+                        new_mon.ivs[STAT_DEF] = int(iv_values[STAT_DEF])
+                        new_mon.ivs[STAT_SPE] = int(iv_values[STAT_SPE])
+                        new_mon.ivs[STAT_SPA] = int(iv_values[STAT_SPA])
+                        new_mon.ivs[STAT_SPD] = int(iv_values[STAT_SPD])
+                if field == '.ev':
+                    if data[2].strip(',').startswith('TRAINER_PARTY_EVS'):
+                        iv_values = ''.join(data[2:]).replace('TRAINER_PARTY_EVS(', '').replace(')', '').split(',')
+                        new_mon.evs[STAT_HP]  = int(iv_values[STAT_HP])
+                        new_mon.evs[STAT_ATK] = int(iv_values[STAT_ATK])
+                        new_mon.evs[STAT_DEF] = int(iv_values[STAT_DEF])
+                        new_mon.evs[STAT_SPE] = int(iv_values[STAT_SPE])
+                        new_mon.evs[STAT_SPA] = int(iv_values[STAT_SPA])
+                        new_mon.evs[STAT_SPD] = int(iv_values[STAT_SPD])
+                if field == '.lvl':
+                    new_mon.level = int(data[2].strip(','))
+                if field == '.species':
+                    new_mon.species = data[2].strip('",')
+                if field == '.heldItem':
+                    new_mon.held_item = data[2].strip('",')
+                if field == '.moves':
+                    moves = []
+                    for move in data[2:]:
+                        if move.strip('",{}') != '':
+                            moves.append(move.strip('",{}'))
+                    if moves == []:
+                        reading_moves = True
+                    else:                            
+                        while len(moves) < 4:
+                            moves.append('MOVE_NONE')
+                        new_mon.moves = moves
+                if field == '.nature':
+                    new_mon.nature = data[2].strip('",')
+                if field == '.gender':
+                    new_mon.gender = data[2].strip('",')
+                if field == '.ability':
+                    new_mon.ability = data[2].strip('",')
+                if field == '.ball':
+                    new_mon.ball = data[2].strip('",')
+                if field == '.friendship':
+                    new_mon.friendship = int(data[2].strip(','))
+                if field == '.isShiny':
+                    if data[2].strip(',') == 'TRUE':
+                        new_mon.is_shiny = True
+                    else:
+                        new_mon.is_shiny = False
+                if field == '.teraType':
+                    new_mon.tera_type = data[2].strip('",')
+                if field == '.gigantamaxFactor':
+                    if data[2].strip(',') == 'TRUE':
+                        new_mon.gigantamax_factor = True
+                    else:
+                        new_mon.gigantamax_factor = False
+                if field == '.shouldUseDynamax':
+                    if data[2].strip(',') == 'TRUE':
+                        new_mon.use_dynamax = True
+                    else:
+                        new_mon.use_dynamax = False
+                if field == '.dynamaxLevel':
+                    new_mon.dynamax_lvl = data[2].strip(',')
+
+        return party
+
+
+    def parse_data_inc_files_for_trainerbattle(self, trainer_id):
+        '''
+        Parse all the .inc files in scripts/ and maps/ folders to find the trainerbattle references for the given trainer_id.
+        Returns a list of map names or script file names where the trainerbattle is found.
+        '''
+        maps_root_folder = os.path.join(self.project_path + self.project_files['scripts_folder'], 'maps')
+        scripts_root_folder = os.path.join(self.project_path + self.project_files['scripts_folder'], 'scripts')
+        trainerbattle_folders = []
+
+        for map_name in os.listdir(maps_root_folder):
+            map_folder_path = os.path.join(maps_root_folder, map_name)
+            map_scripts_path = os.path.join(map_folder_path, 'scripts.inc')
+            if os.path.isfile(map_scripts_path):
+                with open(map_scripts_path, 'rt') as f:
+                    script_file = f.readlines()
+                
+                for line in script_file:
+                    if line.strip().startswith('trainerbattle'):
+                        if (trainer_id + ',') in line:
+                            if map_name not in trainerbattle_folders:
+                                trainerbattle_folders.append(map_name)
+        
+        for file in os.listdir(scripts_root_folder):
+            special_scripts_path = os.path.join(scripts_root_folder, file)
+            if os.path.isfile(special_scripts_path):
+                with open(special_scripts_path, 'rt') as f:
+                    script_file = f.readlines()
+                
+                for line in script_file:
+                    if line.strip().startswith('trainerbattle'):
+                        if (trainer_id + ',') in line:
+                            if ('File: ' + file) not in trainerbattle_folders:
+                                trainerbattle_folders.append('File: ' + file)
+
+        if len(trainerbattle_folders) == 0:
+            trainerbattle_folders.append('Probably rematch or in src. Check manually.')
+
+        return trainerbattle_folders
 
 
 if __name__ == "__main__":

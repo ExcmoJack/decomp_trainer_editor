@@ -1,1 +1,5 @@
 assets/config.json
+src/modules/__pycache__
+
+# Temporary excluded before translation implemented
+assets/strings.json
